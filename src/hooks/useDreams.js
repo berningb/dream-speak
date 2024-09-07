@@ -1,12 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAuth0 } from '@auth0/auth0-react'
-import gql from 'graphql-tag'
-import useUsers from './useUsers'
 
-// Query to fetch dreams associated with the authenticated user
-const GET_USER_DREAMS = gql`
-  query GetUserDreams($where: DreamWhereInput) {
-    dreams(where: $where) {
+const GET_USER_DREAMS = `
+  query GetUserDreams {
+    dreams {
       id
       title
       date
@@ -21,19 +18,60 @@ const GET_USER_DREAMS = gql`
   }
 `
 
+const ADD_DREAM_MUTATION = `
+  mutation AddDream($userId: ID!, $title: String!, $date: String!, $description: String!, $tags: [String!]!, $isPublic: Boolean!, $image: String) {
+    addDream(userId: $userId, title: $title, date: $date, description: $description, tags: $tags, isPublic: $isPublic, image: $image) {
+      id
+      title
+      date
+      description
+      tags
+      isPublic
+      image
+    }
+  }
+`
+
 export default function useDreams () {
   const { getIdTokenClaims, isAuthenticated } = useAuth0()
   const [dreams, setDreams] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
-  const { authUser } = useUsers()
+  const fetchDreams = useCallback(async () => {
+    if (!isAuthenticated) return
 
-  useEffect(() => {
-    const fetchDreams = async () => {
-      if (!isAuthenticated || !authUser) return
+    setLoading(true)
+    try {
+      const tokenClaims = await getIdTokenClaims()
+      const token = tokenClaims.__raw
 
-      setLoading(true)
+      const response = await fetch('http://localhost:4000/graphql', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          query: GET_USER_DREAMS
+        })
+      })
+
+      const { data, errors } = await response.json()
+      if (errors) throw new Error(errors[0].message)
+
+      setDreams(data.dreams)
+    } catch (err) {
+      setError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }, [isAuthenticated, getIdTokenClaims])
+
+  const addDream = useCallback(
+    async newDream => {
+      if (!isAuthenticated) return
+
       try {
         const tokenClaims = await getIdTokenClaims()
         const token = tokenClaims.__raw
@@ -45,24 +83,30 @@ export default function useDreams () {
             Authorization: `Bearer ${token}`
           },
           body: JSON.stringify({
-            query: GET_USER_DREAMS.loc.source.body,
-            variables: { where: { user: { id: authUser.id } } }
+            query: ADD_DREAM_MUTATION,
+            variables: {
+              userId: tokenClaims.sub,
+              ...newDream
+            }
           })
         })
 
         const { data, errors } = await response.json()
+        console.log('Response data:', data)
         if (errors) throw new Error(errors[0].message)
 
-        setDreams(data.dreams)
+        setDreams(prevDreams => [...prevDreams, data.addDream])
+        fetchDreams() // Fetch dreams after adding a new one
       } catch (err) {
         setError(err.message)
-      } finally {
-        setLoading(false)
       }
-    }
+    },
+    [isAuthenticated, getIdTokenClaims, fetchDreams]
+  )
 
+  useEffect(() => {
     fetchDreams()
-  }, [isAuthenticated, authUser, getIdTokenClaims])
+  }, [fetchDreams])
 
-  return { dreams, loading, error }
+  return { dreams, loading, error, addDream, fetchDreams }
 }

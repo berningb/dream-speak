@@ -1,37 +1,43 @@
-import React from 'react';
-import Layout from '../components/Layout';
-import useDreams from '../hooks/useDreams';
+import React, { useState } from 'react'
+import { IoAdd } from 'react-icons/io5'
+import { useNavigate } from 'react-router-dom'
+import Layout from '../components/Layout'
+import useDreams from '../hooks/useDreams'
+import AddDreamModal from '../components/AddDreamModal'
 
-function MyDreams() {
-  const { dreams, loading, error } = useDreams();
-
-  if (loading) return <div>Loading...</div>;
-  if (error) return <div>Error: {error}</div>;
-
-  console.log('dreams', dreams);
+const DreamItem = ({ dream }) => {
+  const navigate = useNavigate()
 
   return (
-    <Layout>
-      <div>
-        <h1>My Dreams</h1>
-        {dreams.length === 0 ? (
-          <div>No dreams found</div>
-        ) : (
-          <ul>
-            {dreams.map((dream) => (
-              <li key={dream.id}>
-                <h2>{dream.title}</h2>
-                <p>{dream.description}</p>
-                <p>{new Date(dream.date).toLocaleDateString()}</p>
-                {dream.image && <img src={dream.image} alt={dream.title} />}
-                <p>Tags: {dream.tags.join(', ')}</p>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    </Layout>
-  );
+    <div className='dream-item' onClick={() => navigate(`/dream/${dream.id}`)}>
+      <h2>{dream.title}</h2>
+    </div>
+  )
 }
 
-export default MyDreams;
+export default function MyDreams () {
+  const { dreams, loading, error, fetchDreams } = useDreams()
+
+  if (loading) return <div>Loading...</div>
+  if (error) return <div>Error: {error}</div>
+
+  const handleAddDream = async () => {
+    await fetchDreams() // Fetch dreams after adding a new one
+  }
+
+  console.log(dreams)
+  return (
+    <Layout>
+      <AddDreamModal onAddDream={handleAddDream} />
+
+      <div className='flex flex-col items-center justify-start h-screen'>
+        <h1 className='text-4xl font-bold text-center py-6'>My Dreams</h1>
+        <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 w-full max-w-2xl'>
+          {dreams.map(dream => (
+            <DreamItem key={dream.id} dream={dream} />
+          ))}
+        </div>
+      </div>
+    </Layout>
+  )
+}

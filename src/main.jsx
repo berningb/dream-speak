@@ -1,12 +1,13 @@
 import './index.css'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { Auth0Provider } from '@auth0/auth0-react';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { Auth0Provider } from '@auth0/auth0-react'
+import { BrowserRouter as Router, Route, Routes } from 'react-router-dom'
 
-import User from './pages/User';
-import MyDreams from './pages/MyDreams';
-import AllDreams from './pages/AllDreams';
+import User from './pages/User'
+import MyDreams from './pages/MyDreams'
+import AllDreams from './pages/AllDreams'
+import Dream from './pages/Dream'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
@@ -18,11 +19,12 @@ createRoot(document.getElementById('root')).render(
     >
       <Router>
         <Routes>
-          <Route path="/" element={<AllDreams />} />
-          <Route path="/my-dreams" element={<MyDreams />} />
-          <Route path="/user" element={<User />} />
+          <Route path='/' element={<AllDreams />} />
+          <Route path='/my-dreams' element={<MyDreams />} />
+          <Route path='/dream/:id' element={<Dream />} />
+          <Route path='/user' element={<User />} />
         </Routes>
       </Router>
     </Auth0Provider>
-  </StrictMode>,
+  </StrictMode>
 )
