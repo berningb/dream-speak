@@ -322,10 +322,10 @@ export default function FavoritesAndNotes() {
               <div className='flex justify-between items-center mb-4'>
                 <h3 className='text-xl font-semibold text-slate-800'>📝 Personal Notes</h3>
                 <div className='dropdown dropdown-end'>
-                  <div tabIndex={0} role='button' className='btn btn-sm btn-circle btn-ghost'>
-                    💡
+                  <div tabIndex={0} role='button' className='btn btn-sm btn-outline btn-warning hover:bg-yellow-100 transition-colors' title='Writing Prompts & Tips'>
+                    💡 Tips
                   </div>
-                  <div tabIndex={0} className='dropdown-content z-[1] menu p-4 shadow bg-base-100 rounded-box w-80'>
+                  <div tabIndex={0} className='dropdown-content z-[1] menu p-4 shadow-lg bg-base-100 rounded-box w-80 border border-slate-200'>
                     <h4 className='font-semibold mb-3 text-slate-800'>💡 Writing Prompts & Tips</h4>
                     <div className='space-y-3'>
                       <div>
