@@ -7,11 +7,11 @@ export default function Reflections() {
   const [activeView, setActiveView] = useState('landing') // 'landing', 'analytics', 'favorites-notes'
 
   if (activeView === 'analytics') {
-    return <Analytics />
+    return <Analytics onBack={() => setActiveView('landing')} />
   }
 
   if (activeView === 'favorites-notes') {
-    return <FavoritesAndNotes />
+    return <FavoritesAndNotes onBack={() => setActiveView('landing')} />
   }
 
   return (

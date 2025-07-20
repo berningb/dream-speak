@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useAuth0 } from '@auth0/auth0-react'
 import Layout from '../../../components/Layout'
 
-export default function Analytics() {
+export default function Analytics({ onBack }) {
   const [dreams, setDreams] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -131,6 +131,14 @@ export default function Analytics() {
     return (
       <Layout>
         <div className='flex flex-col items-center justify-start h-screen'>
+          <div className='w-full max-w-6xl mx-auto px-4 mb-4'>
+            <button 
+              onClick={onBack}
+              className='btn btn-outline btn-sm mb-4'
+            >
+              ← Back to Reflections
+            </button>
+          </div>
           <h1 className='text-4xl font-bold text-center py-6'>Dream Analytics</h1>
           <div className='max-w-6xl mx-auto px-4 w-full'>
             <div className='flex justify-center items-center h-64'>
@@ -146,6 +154,14 @@ export default function Analytics() {
     return (
       <Layout>
         <div className='flex flex-col items-center justify-start h-screen'>
+          <div className='w-full max-w-6xl mx-auto px-4 mb-4'>
+            <button 
+              onClick={onBack}
+              className='btn btn-outline btn-sm mb-4'
+            >
+              ← Back to Reflections
+            </button>
+          </div>
           <h1 className='text-4xl font-bold text-center py-6'>Dream Analytics</h1>
           <div className='max-w-6xl mx-auto px-4 w-full'>
             <div className='alert alert-error'>
@@ -160,6 +176,14 @@ export default function Analytics() {
   return (
     <Layout>
       <div className='flex flex-col items-center justify-start min-h-screen'>
+        <div className='w-full max-w-6xl mx-auto px-4 mb-4'>
+          <button 
+            onClick={onBack}
+            className='btn btn-outline btn-sm mb-4'
+          >
+            ← Back to Reflections
+          </button>
+        </div>
         <h1 className='text-4xl font-bold text-center py-6'>Dream Analytics</h1>
         <div className='max-w-6xl mx-auto px-4 w-full'>
           {/* Overview Stats */}

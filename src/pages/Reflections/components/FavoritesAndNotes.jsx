@@ -67,7 +67,7 @@ const GET_NOTE_QUERY = `
   }
 `
 
-export default function FavoritesAndNotes() {
+export default function FavoritesAndNotes({ onBack }) {
   const [selectedDream, setSelectedDream] = useState(null)
   const [noteContent, setNoteContent] = useState('')
   const [currentNote, setCurrentNote] = useState(null)
@@ -175,6 +175,14 @@ export default function FavoritesAndNotes() {
     return (
       <Layout>
         <div className='flex flex-col items-center justify-start h-screen'>
+          <div className='w-full max-w-6xl mx-auto px-4 mb-4'>
+            <button 
+              onClick={onBack}
+              className='btn btn-outline btn-sm mb-4'
+            >
+              ← Back to Reflections
+            </button>
+          </div>
           <h1 className='text-4xl font-bold text-center py-6'>⭐ Favorites & Notes</h1>
           <div className='max-w-6xl mx-auto px-4 w-full'>
             <div className='flex justify-center items-center h-64'>
@@ -190,6 +198,14 @@ export default function FavoritesAndNotes() {
     return (
       <Layout>
         <div className='flex flex-col items-center justify-start h-screen'>
+          <div className='w-full max-w-6xl mx-auto px-4 mb-4'>
+            <button 
+              onClick={onBack}
+              className='btn btn-outline btn-sm mb-4'
+            >
+              ← Back to Reflections
+            </button>
+          </div>
           <h1 className='text-4xl font-bold text-center py-6'>⭐ Favorites & Notes</h1>
           <div className='max-w-6xl mx-auto px-4 w-full'>
             <div className='alert alert-error'>
@@ -204,6 +220,14 @@ export default function FavoritesAndNotes() {
   return (
     <Layout>
       <div className='flex flex-col items-center justify-start min-h-screen'>
+        <div className='w-full max-w-7xl mx-auto px-4 mb-4'>
+          <button 
+            onClick={onBack}
+            className='btn btn-outline btn-sm mb-4'
+          >
+            ← Back to Reflections
+          </button>
+        </div>
         <h1 className='text-4xl font-bold text-center py-6'>⭐ Favorites & Notes</h1>
         <div className='max-w-7xl mx-auto px-4 w-full'>
           <div className='grid grid-cols-1 lg:grid-cols-2 gap-8'>
