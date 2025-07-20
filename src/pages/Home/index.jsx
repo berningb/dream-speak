@@ -1,70 +1,48 @@
 import { useState, useEffect } from 'react'
-import { useAuth0 } from '@auth0/auth0-react'
 import { useNavigate } from 'react-router-dom'
 import Layout from '../../components/Layout'
 import DreamCard from '../../components/DreamCard'
+import useApi from '../../hooks/useApi'
 
 export default function Home() {
   const [recentDreams, setRecentDreams] = useState([])
-  const [loading, setLoading] = useState(true)
-  const { getIdTokenClaims } = useAuth0()
+  const { apiCall, loading, error } = useApi()
   const navigate = useNavigate()
 
   useEffect(() => {
     const fetchRecentDreams = async () => {
-      try {
-        const token = await getIdTokenClaims()
-        
-        const response = await fetch('http://localhost:4000/graphql', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token.__raw}`
-          },
-          body: JSON.stringify({
-            query: `
-              query {
-                dreams {
-                  id
-                  title
-                  description
-                  date
-                  image
-                  isPublic
-                  tags
-                  mood
-                  emotions
-                  colors
-                  user {
-                    id
-                    email
-                    firstName
-                    lastName
-                  }
-                }
-              }
-            `
-          })
-        })
-
-        const data = await response.json()
-        
-        if (data.errors) {
-          throw new Error(data.errors[0].message)
+      const data = await apiCall(`
+        query {
+          dreams {
+            id
+            title
+            description
+            date
+            image
+            isPublic
+            tags
+            mood
+            emotions
+            colors
+            user {
+              id
+              email
+              firstName
+              lastName
+            }
+          }
         }
+      `)
 
+      if (data) {
         // Get the 3 most recent dreams
-        const recent = data.data.dreams.slice(0, 3)
+        const recent = data.dreams.slice(0, 3)
         setRecentDreams(recent)
-      } catch (err) {
-        console.error('Error fetching recent dreams:', err)
-      } finally {
-        setLoading(false)
       }
     }
 
     fetchRecentDreams()
-  }, [getIdTokenClaims])
+  }, [apiCall])
 
   return (
     <Layout>
@@ -103,6 +81,11 @@ export default function Home() {
           
           <div className='bg-base-200 rounded-lg p-6'>
             <h2 className='text-2xl font-semibold mb-4'>Recent Dreams</h2>
+            {error && (
+              <div className='alert alert-error mb-4'>
+                <span>Error loading dreams: {error}</span>
+              </div>
+            )}
             {loading ? (
               <div className='flex justify-center items-center h-32'>
                 <span className='loading loading-spinner loading-lg'></span>
