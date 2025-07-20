@@ -15,7 +15,7 @@ export default function Explore() {
   const [selectedTag, setSelectedTag] = useState('')
   const [commentsOpen, setCommentsOpen] = useState(false)
   const [selectedDreamId, setSelectedDreamId] = useState(null)
-  const { getIdTokenClaims } = useAuth0()
+  const { getIdTokenClaims, isLoading: auth0Loading } = useAuth0()
   const { isFavorited, toggleFavorite } = useFavorites()
 
   // Get unique moods and tags from dreams
@@ -24,9 +24,14 @@ export default function Explore() {
 
   useEffect(() => {
     const fetchDreams = async () => {
+      if (auth0Loading) return
+      
       try {
         setLoading(true)
         const token = await getIdTokenClaims()
+        if (!token || !token.__raw) {
+          throw new Error('Token not available')
+        }
         
         const response = await fetch('http://localhost:4000/graphql', {
           method: 'POST',
@@ -78,8 +83,10 @@ export default function Explore() {
       }
     }
 
-    fetchDreams()
-  }, [getIdTokenClaims])
+    if (!auth0Loading) {
+      fetchDreams()
+    }
+  }, [getIdTokenClaims, auth0Loading])
 
   // Filter dreams based on search criteria
   useEffect(() => {

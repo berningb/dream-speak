@@ -93,19 +93,22 @@ const DELETE_DREAM_MUTATION = `
 
 
 export default function useDreams () {
-  const { getIdTokenClaims, isAuthenticated, user } = useAuth0()
+  const { getIdTokenClaims, isAuthenticated, user, isLoading: auth0Loading } = useAuth0()
   const [dreams, setDreams] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
   const fetchDreams = useCallback(async () => {
-    if (!isAuthenticated) return
+    if (!isAuthenticated || auth0Loading) return
 
     console.log(user)
 
     setLoading(true)
     try {
       const tokenClaims = await getIdTokenClaims()
+      if (!tokenClaims || !tokenClaims.__raw) {
+        throw new Error('Token not available')
+      }
       const token = tokenClaims.__raw
 
       const response = await fetch('http://localhost:4000/graphql', {
@@ -128,19 +131,23 @@ export default function useDreams () {
     } finally {
       setLoading(false)
     }
-  }, [isAuthenticated, getIdTokenClaims, user])
+  }, [isAuthenticated, auth0Loading, getIdTokenClaims, user])
 
   const addDream = useCallback(
     async newDream => {
-      if (!isAuthenticated || !user) {
+      if (!isAuthenticated || !user || auth0Loading) {
         console.error('User not authenticated or user object missing')
         console.log('isAuthenticated:', isAuthenticated)
         console.log('user:', user)
+        console.log('auth0Loading:', auth0Loading)
         return
       }
 
       try {
         const tokenClaims = await getIdTokenClaims()
+        if (!tokenClaims || !tokenClaims.__raw) {
+          throw new Error('Token not available')
+        }
         const token = tokenClaims.__raw
 
         console.log('Adding dream with user:', user)
@@ -177,15 +184,18 @@ export default function useDreams () {
         setError(err.message)
       }
     },
-    [isAuthenticated, getIdTokenClaims, fetchDreams, user]
+    [isAuthenticated, auth0Loading, getIdTokenClaims, fetchDreams, user]
   )
 
   const updateDream = useCallback(
     async (dreamId, updatedData) => {
-      if (!isAuthenticated) return
+      if (!isAuthenticated || auth0Loading) return
 
       try {
         const tokenClaims = await getIdTokenClaims()
+        if (!tokenClaims || !tokenClaims.__raw) {
+          throw new Error('Token not available')
+        }
         const token = tokenClaims.__raw
 
         const response = await fetch('http://localhost:4000/graphql', {
@@ -218,15 +228,18 @@ export default function useDreams () {
         throw err
       }
     },
-    [isAuthenticated, getIdTokenClaims]
+    [isAuthenticated, auth0Loading, getIdTokenClaims]
   )
 
   const deleteDream = useCallback(
     async (dreamId) => {
-      if (!isAuthenticated) return
+      if (!isAuthenticated || auth0Loading) return
 
       try {
         const tokenClaims = await getIdTokenClaims()
+        if (!tokenClaims || !tokenClaims.__raw) {
+          throw new Error('Token not available')
+        }
         const token = tokenClaims.__raw
 
         const response = await fetch('http://localhost:4000/graphql', {
@@ -258,12 +271,14 @@ export default function useDreams () {
         throw err
       }
     },
-    [isAuthenticated, getIdTokenClaims]
+    [isAuthenticated, auth0Loading, getIdTokenClaims]
   )
 
   useEffect(() => {
-    fetchDreams()
-  }, [fetchDreams])
+    if (!auth0Loading) {
+      fetchDreams()
+    }
+  }, [fetchDreams, auth0Loading])
 
   return { dreams, loading, error, addDream, updateDream, deleteDream, fetchDreams }
 }

@@ -10,14 +10,19 @@ export default function Favorites() {
   const [activeTab, setActiveTab] = useState('my-favorites') // 'my-favorites', 'others-favorites'
   const [myFavorites, setMyFavorites] = useState([])
   const [othersFavorites, setOthersFavorites] = useState([])
-  const { user, getIdTokenClaims } = useAuth0()
+  const { user, getIdTokenClaims, isLoading: auth0Loading } = useAuth0()
   const { getFavorites, removeFavorite } = useFavorites()
 
   useEffect(() => {
     const fetchFavorites = async () => {
+      if (auth0Loading) return
+      
       try {
         setLoading(true)
         const token = await getIdTokenClaims()
+        if (!token || !token.__raw) {
+          throw new Error('Token not available')
+        }
         
         // For now, we'll fetch all dreams and simulate favorites
         // In a real app, you'd have a favorites table/relationship
@@ -81,8 +86,10 @@ export default function Favorites() {
       }
     }
 
-    fetchFavorites()
-  }, [getIdTokenClaims])
+    if (!auth0Loading) {
+      fetchFavorites()
+    }
+  }, [getIdTokenClaims, auth0Loading])
 
   const handleRemoveFavorite = (dreamId) => {
     // Remove from favorites using the hook
