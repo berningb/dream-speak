@@ -8,7 +8,12 @@ dotenv.config();
 export default defineConfig({
   plugins: [react()],
   server: {
-    port: 3000, // Change the port to 3000
+    port: 3000,
+  },
+  test: {
+    globals: true,
+    environment: 'jsdom',
+    setupFiles: ['./src/test/setup.js'],
   },
 })
 

@@ -1,8 +1,8 @@
-# Taking Note
+# DreamSpeak
 
 ## Overview
 
-Taking Note is a web application built with React and Vite, designed to help users manage and share their dreams. The application uses Auth0 for authentication and Prisma with a PostgreSQL database for data management.
+DreamSpeak is a web application built with React and Vite, designed to help users manage and share their dreams. The application uses Auth0 for authentication and Prisma with a PostgreSQL database for data management.
 
 ## Features
 
@@ -16,8 +16,8 @@ Taking Note is a web application built with React and Vite, designed to help use
 1. Clone the repository:
 
    ```sh
-   git clone https://github.com/your-username/taking-note.git
-   cd taking-note
+   git clone https://github.com/your-username/dream-speak.git
+   cd dream-speak
    ```
 
 2. Install the dependencies:
@@ -30,10 +30,12 @@ Taking Note is a web application built with React and Vite, designed to help use
    Create a `.env` file in the root directory and add the following variables:
 
    ```env
-   VITE_CLIENT_DOMAIN=your-auth0-domain
-   VITE_CLIENT_ID=your-auth0-client-id
-   VITE_API_IDENTIFIER=your-api-identifier
+   VITE_CLIENT_DOMAIN=dev-wrmepf3pb43nrndk.us.auth0.com
+   VITE_CLIENT_ID=OwOconAGdjngYK6TgUg3nkZUPETGoTD0
+   VITE_AUDIENCE=https://dev-wrmepf3pb43nrndk.us.auth0.com/api/v2/
    ```
+
+   **Auth0 Dashboard**: https://dev-wrmepf3pb43nrndk.us.auth0.com
 
 4. Start the development server:
    ```sh
@@ -42,7 +44,7 @@ Taking Note is a web application built with React and Vite, designed to help use
 
 ## Project Structure
 
-- **Frontend**: Located in the `taking-note` directory
+- **Frontend**: Located in the `dream-speak` directory
 
   - **Main entry point**: `src/main.jsx` (startLine: 1, endLine: 28)
   - **Components**: `src/components`

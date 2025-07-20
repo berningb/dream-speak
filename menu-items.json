@@ -1,0 +1,113 @@
+{
+    "mainMenu": [
+      {
+        "label": "Home",
+        "path": "/home",
+        "description": "Dashboard with welcome message, quick actions, and highlights"
+      },
+      {
+        "label": "My Dreams",
+        "path": "/my-dreams",
+        "description": "Personal dream entries and reflections",
+        "children": [
+          {
+            "label": "View/Edit Dreams",
+            "path": "/my-dreams/list"
+          },
+          {
+            "label": "Tags & Filters",
+            "path": "/my-dreams/tags"
+          },
+          {
+            "label": "Privacy Settings",
+            "path": "/my-dreams/privacy"
+          }
+        ]
+      },
+      {
+        "label": "Explore",
+        "path": "/explore",
+        "description": "Discover and search public dreams",
+        "children": [
+          {
+            "label": "Dream Feed",
+            "path": "/explore/feed"
+          },
+          {
+            "label": "Search & Filter",
+            "path": "/explore/search"
+          },
+          {
+            "label": "Shared Figures",
+            "path": "/explore/shared"
+          }
+        ]
+      },
+      {
+        "label": "Reflections",
+        "path": "/reflections",
+        "description": "Insights, timelines, and prompts",
+        "children": [
+          {
+            "label": "Timeline",
+            "path": "/reflections/timeline"
+          },
+          {
+            "label": "Prompts",
+            "path": "/reflections/prompts"
+          },
+          {
+            "label": "Dream Packs",
+            "path": "/reflections/packs"
+          }
+        ]
+      },
+      {
+        "label": "Connections",
+        "path": "/connections",
+        "description": "Community interactions and matched dreams",
+        "children": [
+          {
+            "label": "Whispers",
+            "path": "/connections/whispers"
+          },
+          {
+            "label": "Reactions",
+            "path": "/connections/reactions"
+          },
+          {
+            "label": "Dream Circles",
+            "path": "/connections/circles"
+          }
+        ]
+      },
+      {
+        "label": "Log a Dream",
+        "path": "/log",
+        "description": "Start a new dream entry"
+      },
+      {
+        "label": "Settings",
+        "path": "/settings",
+        "description": "User profile and app settings",
+        "children": [
+          {
+            "label": "Profile",
+            "path": "/settings/profile"
+          },
+          {
+            "label": "Privacy",
+            "path": "/settings/privacy"
+          },
+          {
+            "label": "Notifications",
+            "path": "/settings/notifications"
+          },
+          {
+            "label": "Export Data",
+            "path": "/settings/export"
+          }
+        ]
+      }
+    ]
+  }

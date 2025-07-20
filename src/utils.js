@@ -1,3 +1,54 @@
+import moment from 'moment'
+
+// Theme initialization function
+export const initializeTheme = () => {
+  const savedTheme = localStorage.getItem('dream-speak-theme') || 'light';
+  document.documentElement.setAttribute('data-theme', savedTheme);
+  return savedTheme;
+};
+
+export const formatDreamDate = (dateString) => {
+  if (!dateString) return 'No date'
+  
+  console.log('🔍 formatDreamDate input:', dateString, typeof dateString)
+  
+  const momentDate = moment(dateString)
+  console.log('🔍 moment result:', momentDate.format(), 'valid:', momentDate.isValid())
+  
+  if (!momentDate.isValid()) {
+    return 'Invalid date'
+  }
+  
+  // If it's today, show "Today"
+  if (momentDate.isSame(moment(), 'day')) {
+    return 'Today'
+  }
+  
+  // If it's yesterday, show "Yesterday"
+  if (momentDate.isSame(moment().subtract(1, 'day'), 'day')) {
+    return 'Yesterday'
+  }
+  
+  // If it's within the last 7 days, show the day name
+  if (momentDate.isAfter(moment().subtract(7, 'days'))) {
+    return momentDate.format('dddd')
+  }
+  
+  // Otherwise show the date in a nice format
+  return momentDate.format('MMM D')
+}
+
+export const formatFullDate = (dateString) => {
+  if (!dateString) return 'No date'
+  
+  const momentDate = moment(dateString)
+  if (!momentDate.isValid()) {
+    return 'Invalid date'
+  }
+  
+  return momentDate.format('MMMM D, YYYY')
+}
+
 export const themes = [
     { name: 'light', colors: ['#570df8', '#f000b8', '#37cdbe', '#3d4451'] },
     { name: 'dark', colors: ['#661AE6', '#D926A9', '#1FB2A6', '#D99330'] },

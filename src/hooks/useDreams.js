@@ -19,8 +19,22 @@ const GET_USER_DREAMS = `
 `
 
 const ADD_DREAM_MUTATION = `
-  mutation AddDream($userId: ID!, $title: String!, $date: String!, $description: String!, $tags: [String!]!, $isPublic: Boolean!, $image: String) {
-    addDream(userId: $userId, title: $title, date: $date, description: $description, tags: $tags, isPublic: $isPublic, image: $image) {
+  mutation AddDream($title: String!, $date: String!, $description: String!, $tags: [String!]!, $isPublic: Boolean!, $image: String, $mood: String, $emotions: [String], $colors: [String], $role: Boolean, $people: [String], $places: [String], $things: [String]) {
+    addDream(
+      title: $title, 
+      date: $date, 
+      description: $description, 
+      tags: $tags, 
+      isPublic: $isPublic, 
+      image: $image, 
+      mood: $mood, 
+      emotions: $emotions, 
+      colors: $colors, 
+      role: $role, 
+      people: $people, 
+      places: $places, 
+      things: $things
+    ) {
       id
       title
       date
@@ -28,18 +42,66 @@ const ADD_DREAM_MUTATION = `
       tags
       isPublic
       image
+      mood
+      emotions
+      colors
+      role
+      people
+      places
+      things
     }
   }
 `
 
+const UPDATE_DREAM_MUTATION = `
+  mutation UpdateDream($id: ID!, $title: String!, $description: String!, $mood: String, $emotions: [String], $colors: [String], $role: Boolean, $people: [String], $places: [String], $things: [String]) {
+    updateDream(
+      id: $id,
+      title: $title,
+      description: $description,
+      mood: $mood,
+      emotions: $emotions,
+      colors: $colors,
+      role: $role,
+      people: $people,
+      places: $places,
+      things: $things
+    ) {
+      id
+      title
+      date
+      description
+      tags
+      isPublic
+      image
+      mood
+      emotions
+      colors
+      role
+      people
+      places
+      things
+    }
+  }
+`
+
+const DELETE_DREAM_MUTATION = `
+  mutation DeleteDream($dreamId: ID!) {
+    deleteDream(dreamId: $dreamId)
+  }
+`
+
+
 export default function useDreams () {
-  const { getIdTokenClaims, isAuthenticated } = useAuth0()
+  const { getIdTokenClaims, isAuthenticated, user } = useAuth0()
   const [dreams, setDreams] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
 
   const fetchDreams = useCallback(async () => {
     if (!isAuthenticated) return
+
+    console.log(user)
 
     setLoading(true)
     try {
@@ -66,10 +128,60 @@ export default function useDreams () {
     } finally {
       setLoading(false)
     }
-  }, [isAuthenticated, getIdTokenClaims])
+  }, [isAuthenticated, getIdTokenClaims, user])
 
   const addDream = useCallback(
     async newDream => {
+      if (!isAuthenticated || !user) {
+        console.error('User not authenticated or user object missing')
+        console.log('isAuthenticated:', isAuthenticated)
+        console.log('user:', user)
+        return
+      }
+
+      try {
+        const tokenClaims = await getIdTokenClaims()
+        const token = tokenClaims.__raw
+
+        console.log('Adding dream with user:', user)
+        console.log('Dream data:', newDream)
+        console.log('Token available:', !!token)
+        console.log('Token length:', token ? token.length : 0)
+
+        const response = await fetch('http://localhost:4000/graphql', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}` // Use the token here
+          },
+          body: JSON.stringify({
+            query: ADD_DREAM_MUTATION,
+            variables: {
+              ...newDream
+            }
+          })
+        })
+
+        const { data, errors } = await response.json()
+        console.log('Response data:', data)
+        console.log('Response errors:', errors)
+        if (errors) {
+          console.error('GraphQL errors:', errors)
+          throw new Error(errors[0].message)
+        }
+
+        setDreams(prevDreams => [...prevDreams, data.addDream])
+        fetchDreams() // Fetch dreams after adding a new one
+      } catch (err) {
+        console.error('Error in addDream:', err)
+        setError(err.message)
+      }
+    },
+    [isAuthenticated, getIdTokenClaims, fetchDreams, user]
+  )
+
+  const updateDream = useCallback(
+    async (dreamId, updatedData) => {
       if (!isAuthenticated) return
 
       try {
@@ -83,30 +195,75 @@ export default function useDreams () {
             Authorization: `Bearer ${token}`
           },
           body: JSON.stringify({
-            query: ADD_DREAM_MUTATION,
+            query: UPDATE_DREAM_MUTATION,
             variables: {
-              userId: tokenClaims.sub,
-              ...newDream
+              id: dreamId,
+              ...updatedData
             }
           })
         })
 
         const { data, errors } = await response.json()
-        console.log('Response data:', data)
+        console.log('Update response data:', data)
         if (errors) throw new Error(errors[0].message)
 
-        setDreams(prevDreams => [...prevDreams, data.addDream])
-        fetchDreams() // Fetch dreams after adding a new one
+        // Update the dream in the local state
+        setDreams(prevDreams => 
+          prevDreams.map(dream => 
+            dream.id === dreamId ? data.updateDream : dream
+          )
+        )
       } catch (err) {
         setError(err.message)
+        throw err
       }
     },
-    [isAuthenticated, getIdTokenClaims, fetchDreams]
+    [isAuthenticated, getIdTokenClaims]
+  )
+
+  const deleteDream = useCallback(
+    async (dreamId) => {
+      if (!isAuthenticated) return
+
+      try {
+        const tokenClaims = await getIdTokenClaims()
+        const token = tokenClaims.__raw
+
+        const response = await fetch('http://localhost:4000/graphql', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            query: DELETE_DREAM_MUTATION,
+            variables: {
+              dreamId
+            }
+          })
+        })
+
+        const { data, errors } = await response.json()
+        console.log('Delete response data:', data)
+        if (errors) throw new Error(errors[0].message)
+
+        if (data.deleteDream) {
+          // Remove the dream from the local state
+          setDreams(prevDreams => 
+            prevDreams.filter(dream => dream.id !== dreamId)
+          )
+        }
+      } catch (err) {
+        setError(err.message)
+        throw err
+      }
+    },
+    [isAuthenticated, getIdTokenClaims]
   )
 
   useEffect(() => {
     fetchDreams()
   }, [fetchDreams])
 
-  return { dreams, loading, error, addDream, fetchDreams }
+  return { dreams, loading, error, addDream, updateDream, deleteDream, fetchDreams }
 }
