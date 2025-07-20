@@ -3,7 +3,7 @@ import { useAuth0 } from '@auth0/auth0-react'
 import Layout from '../../components/Layout'
 import DreamCard from '../../components/DreamCard'
 import Comments from '../../components/Comments'
-import { useDatabaseFavorites } from '../../hooks/useDatabaseFavorites'
+import useDatabaseFavorites from '../../hooks/useDatabaseFavorites'
 
 export default function Explore() {
   const [dreams, setDreams] = useState([])

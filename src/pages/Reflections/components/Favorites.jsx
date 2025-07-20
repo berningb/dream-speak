@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useAuth0 } from '@auth0/auth0-react'
 import Layout from '../../../components/Layout'
 import DreamCard from '../../../components/DreamCard'
-import { useDatabaseFavorites } from '../../../hooks/useDatabaseFavorites'
+import useDatabaseFavorites from '../../../hooks/useDatabaseFavorites'
 
 export default function Favorites() {
   const [loading, setLoading] = useState(true)

@@ -4,7 +4,7 @@ import Layout from '../../components/Layout'
 import useDreams from '../../hooks/useDreams'
 import AddDreamModal from '../../components/AddDreamModal'
 import DreamCard from '../../components/DreamCard'
-import { useDatabaseFavorites } from '../../hooks/useDatabaseFavorites'
+import useDatabaseFavorites from '../../hooks/useDatabaseFavorites'
 
 const DreamItem = ({ dream, isFavorited, onFavoriteToggle }) => {
   const navigate = useNavigate()
