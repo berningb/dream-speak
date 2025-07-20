@@ -8,13 +8,17 @@ export default function Analytics() {
   const [dreams, setDreams] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const { getIdTokenClaims } = useAuth0()
+  const { getIdTokenClaims, isLoading: auth0Loading } = useAuth0()
 
   useEffect(() => {
     const fetchDreams = async () => {
       try {
         setLoading(true)
         const token = await getIdTokenClaims()
+        
+        if (!token || !token.__raw) {
+          throw new Error('Token not available')
+        }
         
         const response = await fetch('http://localhost:4000/graphql', {
           method: 'POST',
@@ -58,8 +62,11 @@ export default function Analytics() {
       }
     }
 
-    fetchDreams()
-  }, [getIdTokenClaims])
+    // Only fetch dreams when Auth0 is not loading and we have a token
+    if (!auth0Loading) {
+      fetchDreams()
+    }
+  }, [getIdTokenClaims, auth0Loading])
 
   // Analytics calculations
   const totalDreams = dreams.length
@@ -129,7 +136,7 @@ export default function Analytics() {
     }
   }).reverse()
 
-  if (loading) {
+  if (auth0Loading || loading) {
     return (
       <Layout>
         <div className='flex flex-col items-center justify-start h-screen'>
