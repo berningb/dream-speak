@@ -1,6 +1,79 @@
 import { useState, useEffect } from 'react'
 import { useAuth0 } from '@auth0/auth0-react'
-import { useBackendUser } from '../hooks/useUsers.jsx'
+
+const GET_COMMENTS_QUERY = `
+  query GetComments($dreamId: ID!) {
+    comments(dreamId: $dreamId) {
+      id
+      content
+      user {
+        id
+        firstName
+        lastName
+        picture
+      }
+      createdAt
+      likeCount
+      likedByMe
+      replies {
+        id
+        content
+        user {
+          id
+          firstName
+          lastName
+          picture
+        }
+        createdAt
+        likeCount
+        likedByMe
+      }
+    }
+  }
+`
+
+const ADD_COMMENT_MUTATION = `
+  mutation AddComment($dreamId: ID!, $content: String!, $parentId: ID) {
+    addComment(dreamId: $dreamId, content: $content, parentId: $parentId) {
+      id
+      content
+      user {
+        id
+        firstName
+        lastName
+        picture
+      }
+      createdAt
+      likeCount
+      likedByMe
+      replies {
+        id
+        content
+        user {
+          id
+          firstName
+          lastName
+          picture
+        }
+        createdAt
+        likeCount
+        likedByMe
+      }
+    }
+  }
+`
+
+const LIKE_COMMENT_MUTATION = `
+  mutation LikeComment($commentId: ID!) {
+    likeComment(commentId: $commentId)
+  }
+`
+
+const UNLIKE_COMMENT_MUTATION = `
+  mutation UnlikeComment($commentId: ID!) {
+    unlikeComment(commentId: $commentId)
+  }
+`
 
 export default function Comments({ dreamId, isOpen, onClose }) {
   const [comments, setComments] = useState([])
@@ -8,89 +81,66 @@ export default function Comments({ dreamId, isOpen, onClose }) {
   const [replyTo, setReplyTo] = useState(null)
   const [replyText, setReplyText] = useState('')
   const [loading, setLoading] = useState(false)
-  const { user } = useAuth0()
-  const { backendUser } = useBackendUser()
-  // TODO: Replace with backend user fetch if needed
+  const [errorMsg, setErrorMsg] = useState(null)
+  const { getIdTokenClaims } = useAuth0()
+  // const { backendUser } = useBackendUser() // Not used
 
-  // Mock comments data - in a real app, this would come from the API
-  const mockComments = [
-    {
-      id: '1',
-      text: 'This dream feels so familiar! I had something similar last week.',
-      author: {
-        id: 'user1',
-        firstName: 'Sarah',
-        lastName: 'Johnson',
-        picture: 'https://images.unsplash.com/photo-1494790108755-2616b612b786?w=40&h=40&fit=crop&crop=face'
-      },
-      createdAt: new Date(Date.now() - 86400000), // 1 day ago
-      likes: 3,
-      likedBy: ['user2', 'user3'],
-      replies: [
-        {
-          id: 'reply1',
-          text: 'I agree! There\'s something universal about this imagery.',
-          author: {
-            id: 'user2',
-            firstName: 'Mike',
-            lastName: 'Chen',
-            picture: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=40&h=40&fit=crop&crop=face'
-          },
-          createdAt: new Date(Date.now() - 43200000), // 12 hours ago
-          likes: 1,
-          likedBy: ['user1']
-        }
-      ]
-    },
-    {
-      id: '2',
-      text: 'The colors you mentioned are really interesting. Blue often represents calmness and peace.',
-      author: {
-        id: 'user3',
-        firstName: 'Emma',
-        lastName: 'Davis',
-        picture: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=40&h=40&fit=crop&crop=face'
-      },
-      createdAt: new Date(Date.now() - 172800000), // 2 days ago
-      likes: 5,
-      likedBy: ['user1', 'user2', 'user4'],
-      replies: []
+  const fetchComments = async () => {
+    setLoading(true)
+    try {
+      const tokenClaims = await getIdTokenClaims()
+      const response = await fetch('https://localhost:4000/graphql', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${tokenClaims.__raw}`
+        },
+        body: JSON.stringify({
+          query: GET_COMMENTS_QUERY,
+          variables: { dreamId }
+        })
+      })
+      const { data, errors } = await response.json()
+      if (errors) throw new Error(errors[0].message)
+      setComments(data.comments)
+    } catch (err) {
+      console.error('Error fetching comments:', err)
+    } finally {
+      setLoading(false)
     }
-  ]
+  }
 
   useEffect(() => {
-    if (isOpen) {
-      // In a real app, fetch comments from API
-      setComments(mockComments)
+    if (isOpen && dreamId) {
+      fetchComments()
     }
   }, [isOpen, dreamId])
 
   const handleSubmitComment = async (e) => {
     e.preventDefault()
     if (!newComment.trim()) return
-
     setLoading(true)
+    setErrorMsg(null)
     try {
-      // In a real app, this would make an API call
-      const comment = {
-        id: Date.now().toString(),
-        text: newComment,
-        author: {
-          id: user.sub,
-          firstName: backendUser?.firstName || '',
-          lastName: backendUser?.lastName || '',
-          picture: backendUser?.picture || '/default-avatar.png'
+      const tokenClaims = await getIdTokenClaims()
+      const response = await fetch('https://localhost:4000/graphql', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${tokenClaims.__raw}`
         },
-        createdAt: new Date(),
-        likes: 0,
-        likedBy: [],
-        replies: []
-      }
-
-      setComments(prev => [comment, ...prev])
+        body: JSON.stringify({
+          query: ADD_COMMENT_MUTATION,
+          variables: { dreamId, content: newComment }
+        })
+      })
+      const { errors } = await response.json()
+      if (errors) throw new Error(errors[0].message)
       setNewComment('')
+      fetchComments()
     } catch (error) {
-      console.error('Error posting comment:', error)
+      setErrorMsg(error.message || 'Failed to post comment')
+      setTimeout(() => setErrorMsg(null), 4000)
     } finally {
       setLoading(false)
     }
@@ -99,31 +149,25 @@ export default function Comments({ dreamId, isOpen, onClose }) {
   const handleSubmitReply = async (e, parentCommentId) => {
     e.preventDefault()
     if (!replyText.trim()) return
-
     setLoading(true)
     try {
-      // In a real app, this would make an API call
-      const reply = {
-        id: Date.now().toString(),
-        text: replyText,
-        author: {
-          id: user.sub,
-          firstName: backendUser?.firstName || '',
-          lastName: backendUser?.lastName || '',
-          picture: backendUser?.picture || '/default-avatar.png'
+      const tokenClaims = await getIdTokenClaims()
+      const response = await fetch('https://localhost:4000/graphql', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${tokenClaims.__raw}`
         },
-        createdAt: new Date(),
-        likes: 0,
-        likedBy: []
-      }
-
-      setComments(prev => prev.map(comment => 
-        comment.id === parentCommentId 
-          ? { ...comment, replies: [...comment.replies, reply] }
-          : comment
-      ))
+        body: JSON.stringify({
+          query: ADD_COMMENT_MUTATION,
+          variables: { dreamId, content: replyText, parentId: parentCommentId }
+        })
+      })
+      const { errors } = await response.json()
+      if (errors) throw new Error(errors[0].message)
       setReplyText('')
       setReplyTo(null)
+      fetchComments()
     } catch (error) {
       console.error('Error posting reply:', error)
     } finally {
@@ -131,52 +175,40 @@ export default function Comments({ dreamId, isOpen, onClose }) {
     }
   }
 
-  const handleLikeComment = (commentId, isReply = false, parentId = null) => {
-    if (isReply && parentId) {
-      setComments(prev => prev.map(comment => 
-        comment.id === parentId 
-          ? {
-              ...comment,
-              replies: comment.replies.map(reply => 
-                reply.id === commentId 
-                  ? {
-                      ...reply,
-                      likes: reply.likedBy.includes(user.sub) 
-                        ? reply.likes - 1 
-                        : reply.likes + 1,
-                      likedBy: reply.likedBy.includes(user.sub)
-                        ? reply.likedBy.filter(id => id !== user.sub)
-                        : [...reply.likedBy, user.sub]
-                    }
-                  : reply
-              )
-            }
-          : comment
-      ))
-    } else {
-      setComments(prev => prev.map(comment => 
-        comment.id === commentId 
-          ? {
-              ...comment,
-              likes: comment.likedBy.includes(user.sub) 
-                ? comment.likes - 1 
-                : comment.likes + 1,
-              likedBy: comment.likedBy.includes(user.sub)
-                ? comment.likedBy.filter(id => id !== user.sub)
-                : [...comment.likedBy, user.sub]
-            }
-          : comment
-      ))
+  const handleLikeComment = async (commentId, likedByMe) => {
+    setLoading(true)
+    setErrorMsg(null)
+    try {
+      const tokenClaims = await getIdTokenClaims()
+      const response = await fetch('https://localhost:4000/graphql', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${tokenClaims.__raw}`
+        },
+        body: JSON.stringify({
+          query: likedByMe ? UNLIKE_COMMENT_MUTATION : LIKE_COMMENT_MUTATION,
+          variables: { commentId }
+        })
+      })
+      const { errors } = await response.json()
+      if (errors) throw new Error(errors[0].message)
+      fetchComments()
+    } catch (error) {
+      setErrorMsg(error.message || 'Failed to like/unlike comment')
+      setTimeout(() => setErrorMsg(null), 4000)
+    } finally {
+      setLoading(false)
     }
   }
 
   const formatTimeAgo = (date) => {
+    console.log('date', date)
     const now = new Date()
     const diff = now - new Date(date)
     const minutes = Math.floor(diff / 60000)
     const hours = Math.floor(diff / 3600000)
     const days = Math.floor(diff / 86400000)
-
     if (minutes < 1) return 'Just now'
     if (minutes < 60) return `${minutes}m ago`
     if (hours < 24) return `${hours}h ago`
@@ -198,10 +230,13 @@ export default function Comments({ dreamId, isOpen, onClose }) {
             ✕
           </button>
         </div>
-
         {/* Comments List */}
         <div className='flex-1 overflow-y-auto p-6 space-y-6'>
-          {comments.length === 0 ? (
+          {loading ? (
+            <div className='text-center py-8'>
+              <span className='loading loading-spinner loading-lg'></span>
+            </div>
+          ) : comments.length === 0 ? (
             <div className='text-center py-8'>
               <div className='text-4xl mb-4'>💭</div>
               <p className='text-slate-600'>No comments yet. Be the first to share your thoughts!</p>
@@ -213,31 +248,31 @@ export default function Comments({ dreamId, isOpen, onClose }) {
                 <div className='bg-slate-50 rounded-lg p-4'>
                   <div className='flex items-start space-x-3'>
                     <img 
-                      src={comment.author.picture} 
-                      alt={comment.author.firstName}
+                      src={comment.user.picture} 
+                      alt={comment.user.firstName}
                       className='w-10 h-10 rounded-full object-cover'
                     />
                     <div className='flex-1'>
                       <div className='flex items-center space-x-2 mb-2'>
                         <span className='font-semibold text-slate-800'>
-                          {comment.author.firstName} {comment.author.lastName}
+                          {comment.user.firstName} {comment.user.lastName}
                         </span>
                         <span className='text-sm text-slate-500'>
                           {formatTimeAgo(comment.createdAt)}
                         </span>
                       </div>
-                      <p className='text-slate-700 mb-3'>{comment.text}</p>
+                      <p className='text-slate-700 mb-3'>{comment.content}</p>
                       <div className='flex items-center space-x-4'>
                         <button 
                           className={`flex items-center space-x-1 text-sm transition-colors ${
-                            comment.likedBy.includes(user.sub)
+                            comment.likedByMe
                               ? 'text-red-500 font-medium'
                               : 'text-slate-500 hover:text-red-500'
                           }`}
-                          onClick={() => handleLikeComment(comment.id)}
+                          onClick={() => handleLikeComment(comment.id, comment.likedByMe)}
                         >
-                          <span>{comment.likedBy.includes(user.sub) ? '❤️' : '🤍'}</span>
-                          <span>{comment.likes}</span>
+                          <span>{comment.likedByMe ? '❤️' : '🤍'}</span>
+                          <span>{comment.likeCount}</span>
                         </button>
                         <button 
                           className='text-sm text-slate-500 hover:text-blue-500 transition-colors'
@@ -246,117 +281,87 @@ export default function Comments({ dreamId, isOpen, onClose }) {
                           💬 Reply
                         </button>
                       </div>
-                    </div>
-                  </div>
-
-                  {/* Reply Form */}
-                  {replyTo === comment.id && (
-                    <div className='mt-4 pl-12'>
-                      <form onSubmit={(e) => handleSubmitReply(e, comment.id)}>
-                        <div className='flex space-x-2'>
-                          <input
+                      {/* Replies */}
+                      {comment.replies && comment.replies.length > 0 && (
+                        <div className='mt-4 pl-6 border-l-2 border-slate-200 space-y-4'>
+                          {comment.replies.map((reply) => (
+                            <div key={reply.id} className='flex items-start space-x-3'>
+                              <img 
+                                src={reply.user.picture} 
+                                alt={reply.user.firstName}
+                                className='w-8 h-8 rounded-full object-cover'
+                              />
+                              <div className='flex-1'>
+                                <div className='flex items-center space-x-2 mb-1'>
+                                  <span className='font-semibold text-slate-800 text-sm'>
+                                    {reply.user.firstName} {reply.user.lastName}
+                                  </span>
+                                  <span className='text-xs text-slate-500'>
+                                    {formatTimeAgo(reply.createdAt)}
+                                  </span>
+                                </div>
+                                <p className='text-slate-700 mb-2 text-sm'>{reply.content}</p>
+                                <button 
+                                  className={`flex items-center space-x-1 text-xs transition-colors ${
+                                    reply.likedByMe
+                                      ? 'text-red-500 font-medium'
+                                      : 'text-slate-500 hover:text-red-500'
+                                  }`}
+                                  onClick={() => handleLikeComment(reply.id, reply.likedByMe)}
+                                >
+                                  <span>{reply.likedByMe ? '❤️' : '🤍'}</span>
+                                  <span>{reply.likeCount}</span>
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {/* Reply Form */}
+                      {replyTo === comment.id && (
+                        <form className='mt-4 flex items-center space-x-2' onSubmit={e => handleSubmitReply(e, comment.id)}>
+                          <input 
                             type='text'
-                            value={replyText}
-                            onChange={(e) => setReplyText(e.target.value)}
+                            className='input input-bordered input-sm flex-1'
                             placeholder='Write a reply...'
-                            className='flex-1 input input-bordered input-sm'
+                            value={replyText}
+                            onChange={e => setReplyText(e.target.value)}
                             disabled={loading}
                           />
-                          <button 
-                            type='submit' 
-                            className='btn btn-primary btn-sm'
-                            disabled={loading || !replyText.trim()}
-                          >
-                            {loading ? 'Posting...' : 'Reply'}
+                          <button className='btn btn-primary btn-sm' type='submit' disabled={loading || !replyText.trim()}>
+                            Reply
                           </button>
-                          <button 
-                            type='button'
-                            className='btn btn-ghost btn-sm'
-                            onClick={() => {
-                              setReplyTo(null)
-                              setReplyText('')
-                            }}
-                          >
+                          <button className='btn btn-ghost btn-sm' type='button' onClick={() => setReplyTo(null)}>
                             Cancel
                           </button>
-                        </div>
-                      </form>
+                        </form>
+                      )}
                     </div>
-                  )}
-
-                  {/* Replies */}
-                  {comment.replies.length > 0 && (
-                    <div className='mt-4 space-y-3 pl-12'>
-                      {comment.replies.map((reply) => (
-                        <div key={reply.id} className='bg-white rounded-lg p-3 border border-slate-200'>
-                          <div className='flex items-start space-x-3'>
-                            <img 
-                              src={reply.author.picture} 
-                              alt={reply.author.firstName}
-                              className='w-8 h-8 rounded-full object-cover'
-                            />
-                            <div className='flex-1'>
-                              <div className='flex items-center space-x-2 mb-1'>
-                                <span className='font-semibold text-sm text-slate-800'>
-                                  {reply.author.firstName} {reply.author.lastName}
-                                </span>
-                                <span className='text-xs text-slate-500'>
-                                  {formatTimeAgo(reply.createdAt)}
-                                </span>
-                              </div>
-                              <p className='text-sm text-slate-700 mb-2'>{reply.text}</p>
-                              <button 
-                                className={`flex items-center space-x-1 text-xs transition-colors ${
-                                  reply.likedBy.includes(user.sub)
-                                    ? 'text-red-500 font-medium'
-                                    : 'text-slate-500 hover:text-red-500'
-                                }`}
-                                onClick={() => handleLikeComment(reply.id, true, comment.id)}
-                              >
-                                <span>{reply.likedBy.includes(user.sub) ? '❤️' : '🤍'}</span>
-                                <span>{reply.likes}</span>
-                              </button>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  </div>
                 </div>
               </div>
             ))
           )}
         </div>
-
+        {errorMsg && (
+          <div className='alert alert-error mb-4'>
+            <span>{errorMsg}</span>
+          </div>
+        )}
         {/* Add Comment Form */}
-        <div className='p-6 border-t border-slate-200'>
-          <form onSubmit={handleSubmitComment}>
-            <div className='flex space-x-3'>
-              <img 
-                src={user.picture} 
-                alt={user.name}
-                className='w-10 h-10 rounded-full object-cover'
-              />
-              <div className='flex-1'>
-                <input
-                  type='text'
-                  value={newComment}
-                  onChange={(e) => setNewComment(e.target.value)}
-                  placeholder='Share your thoughts on this dream...'
-                  className='input input-bordered w-full'
-                  disabled={loading}
-                />
-              </div>
-              <button 
-                type='submit' 
-                className='btn btn-primary'
-                disabled={loading || !newComment.trim()}
-              >
-                {loading ? 'Posting...' : 'Post'}
-              </button>
-            </div>
-          </form>
-        </div>
+        <form className='p-6 border-t border-slate-200 flex items-center space-x-2' onSubmit={handleSubmitComment}>
+          <input 
+            type='text'
+            className='input input-bordered flex-1'
+            placeholder='Add a comment...'
+            value={newComment}
+            onChange={e => setNewComment(e.target.value)}
+            disabled={loading}
+          />
+          <button className='btn btn-primary' type='submit' disabled={loading || !newComment.trim()}>
+            Comment
+          </button>
+        </form>
       </div>
     </div>
   )

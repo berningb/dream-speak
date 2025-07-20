@@ -1,6 +1,6 @@
 import { formatDreamDate } from '../utils'
 
-export default function DreamCard({ dream, showAuthor = true, onClick, showFavoriteButton = false, isFavorited = false, onFavoriteToggle, showCommentButton = false, onCommentClick }) {
+export default function DreamCard({ dream, showAuthor = true, onClick, showFavoriteButton = false, isFavorited = false, onFavoriteToggle, showCommentButton = false, onCommentClick, likedByMe = false, likeCount = 0, onLikeToggle }) {
   const handleClick = () => {
     if (onClick) {
       onClick(dream)
@@ -21,6 +21,13 @@ export default function DreamCard({ dream, showAuthor = true, onClick, showFavor
     }
   }
 
+  const handleLikeClick = (e) => {
+    e.stopPropagation()
+    if (onLikeToggle) {
+      onLikeToggle(dream.id, likedByMe)
+    }
+  }
+
   return (
     <div 
       className={`bg-base-200 rounded-lg p-4 h-full flex flex-col relative ${onClick ? 'cursor-pointer hover:bg-base-300 transition-colors' : ''}`}
@@ -29,6 +36,7 @@ export default function DreamCard({ dream, showAuthor = true, onClick, showFavor
       <div className='absolute top-2 right-2 flex space-x-1'>
         {showCommentButton && (
           <button 
+            type="button"
             className='btn btn-sm btn-circle btn-ghost bg-white/80 hover:bg-blue-100 transition-all'
             onClick={handleCommentClick}
             title='View comments'
@@ -38,6 +46,7 @@ export default function DreamCard({ dream, showAuthor = true, onClick, showFavor
         )}
         {showFavoriteButton && (
           <button 
+            type="button"
             className={`btn btn-sm btn-circle transition-all ${
               isFavorited 
                 ? 'btn-warning bg-yellow-500 hover:bg-yellow-600 text-white shadow-lg scale-110' 
@@ -49,6 +58,21 @@ export default function DreamCard({ dream, showAuthor = true, onClick, showFavor
             {isFavorited ? '⭐' : '☆'}
           </button>
         )}
+        {/* Like button */}
+        <button
+          type="button"
+          className={`btn btn-sm btn-circle transition-all ${
+            likedByMe
+              ? 'btn-error bg-red-500 hover:bg-red-600 text-white shadow-lg scale-110'
+              : 'btn-ghost bg-white/80 hover:bg-red-100 hover:scale-105'
+          }`}
+          onClick={handleLikeClick}
+          title={likedByMe ? 'Unlike' : 'Like'}
+        >
+          {likedByMe ? '❤️' : '🤍'}
+        </button>
+        {/* Like count */}
+        <span className='ml-1 text-xs text-base-content/60 select-none'>{likeCount}</span>
       </div>
       
       <div className='flex justify-between items-start mb-3'>

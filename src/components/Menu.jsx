@@ -23,6 +23,9 @@ export default function Menu () {
               <li>
                 <Link to='/my-dreams'>My Dreams</Link>
               </li>
+              <li>
+                <Link to='/reflections'>Reflections</Link>
+              </li>
             </>
           )}
         </ul>

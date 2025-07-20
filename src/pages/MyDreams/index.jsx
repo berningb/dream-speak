@@ -5,10 +5,24 @@ import useDreams from '../../hooks/useDreams'
 import AddDreamModal from '../../components/AddDreamModal'
 import DreamCard from '../../components/DreamCard'
 import useFavorites from '../../hooks/useFavorites'
+import { useState } from 'react'
+import { useAuth0 } from '@auth0/auth0-react'
+import Comments from '../../components/Comments'
 
-const DreamItem = ({ dream, isFavorited, onFavoriteToggle }) => {
+const LIKE_DREAM_MUTATION = `
+  mutation LikeDream($dreamId: ID!) {
+    likeDream(dreamId: $dreamId)
+  }
+`
+
+const UNLIKE_DREAM_MUTATION = `
+  mutation UnlikeDream($dreamId: ID!) {
+    unlikeDream(dreamId: $dreamId)
+  }
+`
+
+const DreamItem = ({ dream, isFavorited, onFavoriteToggle, likedByMe, likeCount, onLikeToggle, onCommentClick }) => {
   const navigate = useNavigate()
-
   return (
     <DreamCard 
       dream={dream} 
@@ -17,6 +31,11 @@ const DreamItem = ({ dream, isFavorited, onFavoriteToggle }) => {
       isFavorited={isFavorited}
       onFavoriteToggle={onFavoriteToggle}
       onClick={() => navigate(`/dream/${dream.id}`)}
+      likedByMe={likedByMe}
+      likeCount={likeCount}
+      onLikeToggle={onLikeToggle}
+      showCommentButton={true}
+      onCommentClick={onCommentClick}
     />
   )
 }
@@ -24,6 +43,42 @@ const DreamItem = ({ dream, isFavorited, onFavoriteToggle }) => {
 export default function MyDreams () {
   const { dreams, loading, error, fetchDreams } = useDreams()
   const { isFavorited, toggleFavorite } = useFavorites()
+  const { getIdTokenClaims, isAuthenticated, loginWithRedirect } = useAuth0()
+  const [commentsOpen, setCommentsOpen] = useState(false)
+  const [selectedDreamId, setSelectedDreamId] = useState(null)
+
+  const handleLikeToggle = async (dreamId, likedByMe) => {
+    if (!isAuthenticated) {
+      loginWithRedirect()
+      return
+    }
+    try {
+      const token = await getIdTokenClaims()
+      await fetch('https://localhost:4000/graphql', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token.__raw}`
+        },
+        body: JSON.stringify({
+          query: likedByMe ? UNLIKE_DREAM_MUTATION : LIKE_DREAM_MUTATION,
+          variables: { dreamId }
+        })
+      })
+      await fetchDreams()
+    } catch {
+      // handle error
+    }
+  }
+
+  const handleCommentClick = (dreamId) => {
+    if (!isAuthenticated) {
+      loginWithRedirect()
+      return
+    }
+    setSelectedDreamId(dreamId)
+    setCommentsOpen(true)
+  }
 
   if (loading) return <div>Loading...</div>
   if (error) return <div>Error: {error}</div>
@@ -33,11 +88,9 @@ export default function MyDreams () {
     // Stay on the same page when adding from My Dreams
   }
 
-  console.log(dreams)
   return (
     <Layout>
       <AddDreamModal onAddDream={handleAddDream} />
-
       <div className='flex flex-col items-center justify-start min-h-screen p-6'>
         <div className='w-full max-w-7xl'>
           <div className='flex flex-col items-center mb-8'>
@@ -50,7 +103,6 @@ export default function MyDreams () {
               Add Dream
             </button>
           </div>
-          
           {dreams.length === 0 ? (
             <div className='text-center py-12'>
               <div className='text-6xl mb-4'>🌙</div>
@@ -71,12 +123,22 @@ export default function MyDreams () {
                   dream={dream} 
                   isFavorited={isFavorited(dream.id)}
                   onFavoriteToggle={toggleFavorite}
+                  likedByMe={dream.likedByMe}
+                  likeCount={dream.likeCount}
+                  onLikeToggle={handleLikeToggle}
+                  onCommentClick={handleCommentClick}
                 />
               ))}
             </div>
           )}
         </div>
       </div>
+      {/* Comments Modal */}
+      <Comments
+        dreamId={selectedDreamId}
+        isOpen={commentsOpen}
+        onClose={() => setCommentsOpen(false)}
+      />
     </Layout>
   )
 } 

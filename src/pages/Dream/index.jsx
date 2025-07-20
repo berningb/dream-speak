@@ -1,20 +1,90 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { IoArrowBack, IoPencil, IoTrash } from 'react-icons/io5'
 import Layout from '../../components/Layout'
 import useDreams from '../../hooks/useDreams'
 import EditDreamModal from '../../components/EditDreamModal'
 import { formatFullDate } from '../../utils'
+import Comments from '../../components/Comments'
+import { useAuth0 } from '@auth0/auth0-react'
+
+const DREAM_QUERY = `
+  query Dream($id: ID!) {
+    dream: allDreams {
+      id
+      title
+      description
+      date
+      image
+      isPublic
+      tags
+      mood
+      emotions
+      colors
+      people
+      places
+      things
+      user {
+        id
+        email
+        firstName
+        lastName
+      }
+      likeCount
+      likedByMe
+    }
+  }
+`
+
+const LIKE_DREAM_MUTATION = `
+  mutation LikeDream($dreamId: ID!) {
+    likeDream(dreamId: $dreamId)
+  }
+`
+
+const UNLIKE_DREAM_MUTATION = `
+  mutation UnlikeDream($dreamId: ID!) {
+    unlikeDream(dreamId: $dreamId)
+  }
+`
 
 export default function Dream() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { dreams, loading, error, updateDream, deleteDream } = useDreams()
+  const { loading, error, updateDream, deleteDream } = useDreams()
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
-  
-  // Find the specific dream by ID
-  const dream = dreams?.find(d => d.id === id)
+  const { getIdTokenClaims, isAuthenticated, loginWithRedirect } = useAuth0()
+  const [dreamData, setDreamData] = useState(null)
+  const [likeLoading, setLikeLoading] = useState(false)
+  const [commentsOpen, setCommentsOpen] = useState(false)
+
+  useEffect(() => {
+    const fetchDream = async () => {
+      try {
+        const headers = { 'Content-Type': 'application/json' }
+        if (isAuthenticated) {
+          const token = await getIdTokenClaims()
+          if (token && token.__raw) {
+            headers['Authorization'] = `Bearer ${token.__raw}`
+          }
+        }
+        const response = await fetch('https://localhost:4000/graphql', {
+          method: 'POST',
+          headers,
+          body: JSON.stringify({ query: DREAM_QUERY })
+        })
+        const data = await response.json()
+        if (data.errors) throw new Error(data.errors[0].message)
+        // Find the dream by id
+        const found = data.data.dream.find(d => d.id === id)
+        setDreamData(found)
+      } catch {
+        setDreamData(null)
+      }
+    }
+    fetchDream()
+  }, [id, isAuthenticated, getIdTokenClaims])
 
   const handleEditDream = async (dreamId, updatedData) => {
     try {
@@ -27,10 +97,58 @@ export default function Dream() {
 
   const handleDeleteDream = async () => {
     try {
-      await deleteDream(dream.id)
+      await deleteDream(dreamData.id)
       navigate('/my-dreams')
     } catch (error) {
       console.error('Error deleting dream:', error)
+    }
+  }
+
+  const handleLikeToggle = async (dreamId, likedByMe) => {
+    if (!isAuthenticated) {
+      loginWithRedirect()
+      return
+    }
+    setLikeLoading(true)
+    try {
+      const token = await getIdTokenClaims()
+      const response = await fetch('https://localhost:4000/graphql', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token.__raw}`
+        },
+        body: JSON.stringify({
+          query: likedByMe ? UNLIKE_DREAM_MUTATION : LIKE_DREAM_MUTATION,
+          variables: { dreamId }
+        })
+      })
+      const { errors } = await response.json()
+      if (errors) throw new Error(errors[0].message)
+      // Refresh dream data
+      const fetchDream = async () => {
+        try {
+          const headers = { 'Content-Type': 'application/json' }
+          if (isAuthenticated) {
+            const token = await getIdTokenClaims()
+            if (token && token.__raw) {
+              headers['Authorization'] = `Bearer ${token.__raw}`
+            }
+          }
+          const response = await fetch('https://localhost:4000/graphql', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ query: DREAM_QUERY })
+          })
+          const data = await response.json()
+          if (data.errors) throw new Error(data.errors[0].message)
+          const found = data.data.dream.find(d => d.id === id)
+          setDreamData(found)
+        } catch {/* ignore */}
+      }
+      fetchDream()
+    } finally {
+      setLikeLoading(false)
     }
   }
   
@@ -54,7 +172,7 @@ export default function Dream() {
     </Layout>
   )
   
-  if (!dream) return (
+  if (!dreamData) return (
     <Layout>
       <div className='flex items-center justify-center min-h-screen'>
         <div className='text-center'>
@@ -68,6 +186,9 @@ export default function Dream() {
       </div>
     </Layout>
   )
+
+  // Use dreamData instead of dream for rendering
+  const dream = dreamData
 
   return (
     <Layout>
@@ -106,7 +227,23 @@ export default function Dream() {
             <div className='mb-8'>
               <h1 className='text-4xl font-bold mb-4 text-primary'>{dream.title}</h1>
               
-              <div className='flex flex-wrap gap-4 mb-6'>
+              <div className='flex flex-wrap gap-4 mb-6 items-center'>
+                {/* Like button and count */}
+                <button
+                  type="button"
+                  className={`btn btn-sm btn-circle transition-all ${
+                    dream.likedByMe
+                      ? 'btn-error bg-red-500 hover:bg-red-600 text-white shadow-lg scale-110'
+                      : 'btn-ghost bg-white/80 hover:bg-red-100 hover:scale-105'
+                  }`}
+                  onClick={() => handleLikeToggle(dream.id, dream.likedByMe)}
+                  disabled={likeLoading}
+                  title={dream.likedByMe ? 'Unlike' : 'Like'}
+                >
+                  {dream.likedByMe ? '❤️' : '🤍'}
+                </button>
+                <span className='ml-1 text-base text-base-content/60 select-none'>{dream.likeCount}</span>
+                {/* Existing mood/role badges */}
                 {dream.mood && (
                   <div className='flex items-center gap-2'>
                     <span className='text-sm font-medium text-base-content/70'>Mood:</span>
@@ -122,6 +259,15 @@ export default function Dream() {
                     </span>
                   </div>
                 )}
+                {/* Comments button */}
+                <button
+                  type="button"
+                  className='btn btn-sm btn-circle btn-ghost bg-white/80 hover:bg-blue-100 transition-all ml-2'
+                  onClick={() => setCommentsOpen(true)}
+                  title='View comments'
+                >
+                  💬
+                </button>
               </div>
             </div>
 
@@ -260,6 +406,12 @@ export default function Dream() {
           <button onClick={() => setIsDeleteModalOpen(false)}>close</button>
         </form>
       </dialog>
+      {/* Comments Modal */}
+      <Comments
+        dreamId={dream.id}
+        isOpen={commentsOpen}
+        onClose={() => setCommentsOpen(false)}
+      />
     </Layout>
   )
 } 

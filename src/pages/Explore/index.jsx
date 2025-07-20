@@ -16,7 +16,8 @@ export default function Explore() {
   const [selectedTag, setSelectedTag] = useState('')
   const [commentsOpen, setCommentsOpen] = useState(false)
   const [selectedDreamId, setSelectedDreamId] = useState(null)
-  const { getIdTokenClaims, isAuthenticated, loginWithRedirect } = useAuth0()
+  const [likeError, setLikeError] = useState(null)
+  const { getIdTokenClaims, isAuthenticated, isLoading: auth0Loading, loginWithRedirect } = useAuth0()
   const favoritesHook = useFavorites()
   const isFavorited = isAuthenticated ? favoritesHook.isFavorited : () => false
   const toggleFavorite = isAuthenticated ? favoritesHook.toggleFavorite : () => {}
@@ -27,17 +28,52 @@ export default function Explore() {
   const moods = [...new Set(dreams.map(dream => dream.mood).filter(Boolean))]
   const allTags = [...new Set(dreams.flatMap(dream => dream.tags || []))]
 
+  const DREAMS_QUERY = `
+    query AllDreams {
+      allDreams {
+        id
+        title
+        description
+        date
+        image
+        isPublic
+        tags
+        mood
+        emotions
+        colors
+        user {
+          id
+          email
+          firstName
+          lastName
+        }
+        likeCount
+        likedByMe
+      }
+    }
+  `
+
+  const LIKE_DREAM_MUTATION = `
+    mutation LikeDream($dreamId: ID!) {
+      likeDream(dreamId: $dreamId)
+    }
+  `
+
+  const UNLIKE_DREAM_MUTATION = `
+    mutation UnlikeDream($dreamId: ID!) {
+      unlikeDream(dreamId: $dreamId)
+    }
+  `
+
   useEffect(() => {
     const fetchDreams = async () => {
       try {
         setLoading(true)
-        
-        // For non-authenticated users, we'll need to create a public endpoint or modify the backend
-        // For now, let's try to fetch without authentication
         const headers = {
           'Content-Type': 'application/json'
         }
-        
+        // Wait for Auth0 to finish loading
+        if (auth0Loading) return
         // Add authorization header only if user is authenticated
         if (isAuthenticated) {
           const token = await getIdTokenClaims()
@@ -45,48 +81,19 @@ export default function Explore() {
             headers['Authorization'] = `Bearer ${token.__raw}`
           }
         }
-        
         const apiUrl = getApiUrl()
-        
         const response = await fetch(apiUrl, {
           method: 'POST',
           headers,
-          body: JSON.stringify({
-            query: `
-              query {
-                allDreams {
-                  id
-                  title
-                  description
-                  date
-                  image
-                  isPublic
-                  tags
-                  mood
-                  emotions
-                  colors
-                  user {
-                    id
-                    email
-                    firstName
-                    lastName
-                  }
-                }
-              }
-            `
-          })
+          body: JSON.stringify({ query: DREAMS_QUERY })
         })
-
         const data = await response.json()
-        
         if (data.errors) {
           throw new Error(data.errors[0].message)
         }
-
         if (!data.data || !data.data.allDreams) {
           throw new Error('No dreams data received from server')
         }
-
         // Filter to only show public dreams
         const publicDreams = data.data.allDreams.filter(dream => dream.isPublic)
         setDreams(publicDreams)
@@ -98,9 +105,11 @@ export default function Explore() {
         setLoading(false)
       }
     }
-
-    fetchDreams()
-  }, []) // Only fetch once on component mount since we're getting public dreams
+    // Only fetch after Auth0 is done loading
+    if (!auth0Loading) {
+      fetchDreams()
+    }
+  }, [auth0Loading, isAuthenticated, getIdTokenClaims])
 
   // Filter dreams based on search criteria
   useEffect(() => {
@@ -148,6 +157,71 @@ export default function Explore() {
     }
     setSelectedDreamId(dreamId)
     setCommentsOpen(true)
+  }
+
+  const handleLikeToggle = async (dreamId, likedByMe) => {
+    if (!isAuthenticated) {
+      loginWithRedirect()
+      return
+    }
+    try {
+      const token = await getIdTokenClaims()
+      const apiUrl = getApiUrl()
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token.__raw}`
+        },
+        body: JSON.stringify({
+          query: likedByMe ? UNLIKE_DREAM_MUTATION : LIKE_DREAM_MUTATION,
+          variables: { dreamId }
+        })
+      })
+      const { errors } = await response.json()
+      if (errors) throw new Error(errors[0].message)
+      // Refresh dreams to update like status/count
+      const fetchDreams = async () => {
+        try {
+          setLoading(true)
+          const headers = {
+            'Content-Type': 'application/json'
+          }
+          if (isAuthenticated) {
+            const token = await getIdTokenClaims()
+            if (token && token.__raw) {
+              headers['Authorization'] = `Bearer ${token.__raw}`
+            }
+          }
+          const apiUrl = getApiUrl()
+          const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({ query: DREAMS_QUERY })
+          })
+          const data = await response.json()
+          if (data.errors) {
+            throw new Error(data.errors[0].message)
+          }
+          if (!data.data || !data.data.allDreams) {
+            throw new Error('No dreams data received from server')
+          }
+          const publicDreams = data.data.allDreams.filter(dream => dream.isPublic)
+          setDreams(publicDreams)
+          setFilteredDreams(publicDreams)
+        } catch (err) {
+          console.error('Error fetching dreams:', err)
+          setError(err.message)
+        } finally {
+          setLoading(false)
+        }
+      }
+      fetchDreams()
+      setLikeError(null)
+    } catch (err) {
+      setLikeError(err.message || 'Failed to like/unlike dream')
+      setTimeout(() => setLikeError(null), 4000)
+    }
   }
 
   if (loading) {
@@ -276,6 +350,11 @@ export default function Explore() {
           </div>
           
           {/* Results Section */}
+          {likeError && (
+            <div className='alert alert-error mb-4'>
+              <span>{likeError}</span>
+            </div>
+          )}
           <div className='space-y-6'>
             <div className='flex justify-between items-center'>
               <h2 className='text-2xl font-semibold text-slate-800'>Dream Results</h2>
@@ -303,6 +382,9 @@ export default function Explore() {
                     onFavoriteToggle={handleFavoriteToggle}
                     showCommentButton={isAuthenticated}
                     onCommentClick={handleCommentClick}
+                    likedByMe={dream.likedByMe}
+                    likeCount={dream.likeCount}
+                    onLikeToggle={handleLikeToggle}
                   />
                 ))}
               </div>

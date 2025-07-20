@@ -1,123 +1,65 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth0 } from '@auth0/auth0-react'
 import Layout from '../../components/Layout'
-import DreamCard from '../../components/DreamCard'
-import useApi from '../../hooks/useApi'
 
 export default function Home() {
-  const [recentDreams, setRecentDreams] = useState([])
-  const { apiCall, loading, error } = useApi()
-  const { isAuthenticated } = useAuth0()
+  const { isAuthenticated, loginWithRedirect } = useAuth0()
   const navigate = useNavigate()
+  const [showMessage, setShowMessage] = useState(false)
 
   useEffect(() => {
-    const fetchRecentDreams = async () => {
-      // Only fetch dreams if user is authenticated
-      if (!isAuthenticated) return
-
-      const data = await apiCall(`
-        query {
-          dreams {
-            id
-            title
-            description
-            date
-            image
-            isPublic
-            tags
-            mood
-            emotions
-            colors
-            user {
-              id
-              email
-              firstName
-              lastName
-            }
-          }
-        }
-      `)
-
-      if (data) {
-        // Get the 3 most recent dreams
-        const recent = data.dreams.slice(0, 3)
-        setRecentDreams(recent)
-      }
-    }
-
-    fetchRecentDreams()
-  }, [apiCall, isAuthenticated])
+    // Fade in the message after a short delay
+    const timer = setTimeout(() => setShowMessage(true), 200)
+    return () => clearTimeout(timer)
+  }, [])
 
   return (
     <Layout>
-      <div className='flex flex-col items-center justify-start h-screen'>
-        <h1 className='text-4xl font-bold text-center py-6'>Welcome to Dream Speak</h1>
-        <div className='max-w-4xl mx-auto px-4 w-full'>
-          <div className='bg-base-200 rounded-lg p-6 mb-6'>
-            <h2 className='text-2xl font-semibold mb-4'>Quick Actions</h2>
-            <div className='flex justify-center gap-4 flex-wrap'>
-             
-              {isAuthenticated ? (
-                <>
-                  <button className='btn btn-secondary btn-lg' onClick={() => navigate('/log')}>Log a Dream</button>
-                  <button className='btn btn-info btn-lg' onClick={() => navigate('/my-dreams')}>My Dreams</button>
-                  <button className='btn btn-accent btn-lg' onClick={() => navigate('/reflections')}>Reflections</button>
-                </>
-              ) : (
-                <>
-                 <button 
-                className='btn btn-primary btn-lg'
+      {/* Animated dreamy background shapes - positioned for animation */}
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        {/* Top left floating circle - primary */}
+        <div className="absolute animate-pulse-slow animate-float-primary  w-[420px] h-[420px] rounded-full blur-3xl bg-primary" />
+        {/* Bottom right floating circle - secondary */}
+        <div className="absolute animate-pulse-slow animate-float-secondary right-[-100px] w-[350px] h-[350px] rounded-full blur-3xl bg-secondary" />
+        {/* Center right floating circle - accent */}
+        <div className="absolute animate-pulse-slow animate-float-accent right-[-80px] w-[220px] h-[220px] rounded-full blur-2xl bg-accent" />
+        {/* Bottom left floating circle - base-200 */}
+        <div className="absolute animate-pulse-slow animate-float-base left-[-60px] w-[180px] h-[180px] rounded-full blur-2xl bg-base-200" />
+      </div>
+      <div className="relative flex flex-col items-center justify-center min-h-screen overflow-hidden bg-gradient-to-br from-blue-50 via-indigo-100 to-purple-100">
+        {/* Main message */}
+        <div className={`z-10 flex flex-col items-center transition-opacity duration-1000 ${showMessage ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-8'}`}>
+          <h1 className="text-5xl md:text-6xl font-extrabold text-center text-indigo-800 drop-shadow-lg mb-6 tracking-tight">
+            DreamSpeak
+          </h1>
+          <p className="text-xl md:text-2xl text-center text-indigo-600 max-w-2xl mb-8 font-medium">
+            Where dreams become stories, and everyone has a voice. <span className="text-indigo-400">Log, share, and explore the world of dreams.</span>
+          </p>
+          <div className="flex flex-col items-center gap-4">
+            {isAuthenticated ? (
+              <button
+                className="btn btn-primary btn-lg px-8 py-3 text-lg shadow-lg hover:scale-105 transition-transform"
                 onClick={() => navigate('/explore')}
               >
                 Explore Dreams
               </button>
-                </>
-              )}
-            </div>
+            ) : (
+              <button
+                className="btn btn-accent btn-lg px-8 py-3 text-lg shadow-lg hover:scale-105 transition-transform"
+                onClick={() => loginWithRedirect()}
+              >
+                Get Started
+              </button>
+            )}
           </div>
-          
-          {/* Only show Recent Dreams section if user is authenticated */}
-          {isAuthenticated && (
-            <div className='bg-base-200 rounded-lg p-6'>
-              <h2 className='text-2xl font-semibold mb-4'>Recent Dreams</h2>
-              {error && (
-                <div className='alert alert-error mb-4'>
-                  <span>Error loading dreams: {error}</span>
-                </div>
-              )}
-              {loading ? (
-                <div className='flex justify-center items-center h-32'>
-                  <span className='loading loading-spinner loading-lg'></span>
-                </div>
-              ) : recentDreams.length === 0 ? (
-                <div className='text-center py-8'>
-                  <p className='text-lg text-base-content/70 mb-4'>
-                    No dreams logged yet. Start your dream journey today!
-                  </p>
-                  <button 
-                    className='btn btn-primary'
-                    onClick={() => navigate('/log')}
-                  >
-                    Log Your First Dream
-                  </button>
-                </div>
-              ) : (
-                <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4'>
-                  {recentDreams.map((dream) => (
-                    <DreamCard 
-                      key={dream.id} 
-                      dream={dream} 
-                      showAuthor={false}
-                      onClick={() => navigate(`/dream/${dream.id}`)}
-                    />
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+        </div>
+        {/* Scroll down indicator */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10 flex flex-col items-center opacity-70 animate-bounce">
+          <span className="text-2xl">↓</span>
+          <span className="text-xs text-indigo-400 mt-1">Scroll to explore</span>
         </div>
       </div>
     </Layout>
   )
-} 
+}
