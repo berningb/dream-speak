@@ -40,8 +40,8 @@ export default function DreamCard({ dream, showAuthor = true, onClick, showFavor
           <button 
             className={`btn btn-sm btn-circle transition-all ${
               isFavorited 
-                ? 'btn-warning bg-yellow-500 hover:bg-yellow-600' 
-                : 'btn-ghost bg-white/80 hover:bg-yellow-100'
+                ? 'btn-warning bg-yellow-500 hover:bg-yellow-600 text-white shadow-lg scale-110' 
+                : 'btn-ghost bg-white/80 hover:bg-yellow-100 hover:scale-105'
             }`}
             onClick={handleFavoriteClick}
             title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}

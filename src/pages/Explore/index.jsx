@@ -3,6 +3,7 @@ import { useAuth0 } from '@auth0/auth0-react'
 import Layout from '../../components/Layout'
 import DreamCard from '../../components/DreamCard'
 import Comments from '../../components/Comments'
+import useFavorites from '../../hooks/useFavorites'
 
 export default function Explore() {
   const [dreams, setDreams] = useState([])
@@ -12,10 +13,10 @@ export default function Explore() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedMood, setSelectedMood] = useState('')
   const [selectedTag, setSelectedTag] = useState('')
-  const [favorites, setFavorites] = useState(new Set()) // Track favorite dream IDs
   const [commentsOpen, setCommentsOpen] = useState(false)
   const [selectedDreamId, setSelectedDreamId] = useState(null)
   const { getIdTokenClaims } = useAuth0()
+  const { isFavorited, toggleFavorite } = useFavorites()
 
   // Get unique moods and tags from dreams
   const moods = [...new Set(dreams.map(dream => dream.mood).filter(Boolean))]
@@ -112,15 +113,7 @@ export default function Explore() {
   }
 
   const handleFavoriteToggle = (dreamId) => {
-    setFavorites(prev => {
-      const newFavorites = new Set(prev)
-      if (newFavorites.has(dreamId)) {
-        newFavorites.delete(dreamId)
-      } else {
-        newFavorites.add(dreamId)
-      }
-      return newFavorites
-    })
+    toggleFavorite(dreamId)
   }
 
   const handleCommentClick = (dreamId) => {
@@ -164,69 +157,71 @@ export default function Explore() {
         <h1 className='text-4xl font-bold text-center py-6'>Explore Dreams</h1>
         <div className='max-w-6xl mx-auto px-4 w-full'>
           {/* Search and Filter Section */}
-          <div className='bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 rounded-xl p-6 mb-8 border border-indigo-200 shadow-lg'>
-            <div className='space-y-6'>
+          <div className='card bg-base-100 shadow-xl border border-base-300 mb-8'>
+            <div className='card-body'>
               <div className='text-center mb-6'>
-                <h2 className='text-2xl font-bold text-slate-800 mb-2'>🔍 Discover Dreams</h2>
-                <p className='text-slate-600'>Search and filter through the dream community</p>
+                <h2 className='card-title text-2xl justify-center mb-2'>🔍 Discover Dreams</h2>
+                <p className='text-base-content/70'>Search and filter through the dream community</p>
               </div>
               
-              <div>
-                <label className='label'>
-                  <span className='label-text font-semibold text-lg text-slate-700'>✨ Search Dreams</span>
-                </label>
-                <input 
-                  type='text' 
-                  className='input input-bordered w-full bg-white/80 backdrop-blur-sm border-indigo-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all shadow-sm' 
-                  placeholder='Search by title, content, or tags...'
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              
-              <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+              <div className='space-y-6'>
                 <div>
                   <label className='label'>
-                    <span className='label-text font-medium text-slate-700'>😊 Mood</span>
+                    <span className='label-text font-semibold text-lg'>✨ Search Dreams</span>
                   </label>
-                  <select 
-                    className='select select-bordered w-full bg-white/80 backdrop-blur-sm border-indigo-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all shadow-sm'
-                    value={selectedMood}
-                    onChange={(e) => setSelectedMood(e.target.value)}
-                  >
-                    <option value=''>Any mood</option>
-                    {moods.map(mood => (
-                      <option key={mood} value={mood}>{mood}</option>
-                    ))}
-                  </select>
+                  <input 
+                    type='text' 
+                    className='input input-bordered w-full' 
+                    placeholder='Search by title, content, or tags...'
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
                 </div>
                 
-                <div>
-                  <label className='label'>
-                    <span className='label-text font-medium text-slate-700'>🏷️ Tags</span>
-                  </label>
-                  <select 
-                    className='select select-bordered w-full bg-white/80 backdrop-blur-sm border-indigo-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all shadow-sm'
-                    value={selectedTag}
-                    onChange={(e) => setSelectedTag(e.target.value)}
-                  >
-                    <option value=''>Any tags</option>
-                    {allTags.slice(0, 20).map(tag => (
-                      <option key={tag} value={tag}>{tag}</option>
-                    ))}
-                  </select>
-                </div>
-                
-                <div>
-                  <label className='label'>
-                    <span className='label-text font-medium text-slate-700'>Actions</span>
-                  </label>
-                  <button 
-                    className='btn w-full bg-gradient-to-r from-indigo-500 to-purple-600 border-0 hover:from-indigo-600 hover:to-purple-700 text-white shadow-md hover:shadow-lg transition-all'
-                    onClick={clearFilters}
-                  >
-                    🗑️ Clear Filters
-                  </button>
+                <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
+                  <div>
+                    <label className='label'>
+                      <span className='label-text font-medium'>😊 Mood</span>
+                    </label>
+                    <select 
+                      className='select select-bordered w-full'
+                      value={selectedMood}
+                      onChange={(e) => setSelectedMood(e.target.value)}
+                    >
+                      <option value=''>Any mood</option>
+                      {moods.map(mood => (
+                        <option key={mood} value={mood}>{mood}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className='label'>
+                      <span className='label-text font-medium'>🏷️ Tags</span>
+                    </label>
+                    <select 
+                      className='select select-bordered w-full'
+                      value={selectedTag}
+                      onChange={(e) => setSelectedTag(e.target.value)}
+                    >
+                      <option value=''>Any tags</option>
+                      {allTags.slice(0, 20).map(tag => (
+                        <option key={tag} value={tag}>{tag}</option>
+                      ))}
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <label className='label'>
+                      <span className='label-text font-medium'>Actions</span>
+                    </label>
+                    <button 
+                      className='btn btn-primary w-full'
+                      onClick={clearFilters}
+                    >
+                      🗑️ Clear Filters
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
@@ -255,7 +250,7 @@ export default function Explore() {
                     dream={dream} 
                     showAuthor={true}
                     showFavoriteButton={true}
-                    isFavorited={favorites.has(dream.id)}
+                    isFavorited={isFavorited(dream.id)}
                     onFavoriteToggle={handleFavoriteToggle}
                     showCommentButton={true}
                     onCommentClick={handleCommentClick}

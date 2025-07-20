@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useAuth0 } from '@auth0/auth0-react'
 import Layout from '../../../components/Layout'
 import DreamCard from '../../../components/DreamCard'
+import useFavorites from '../../../hooks/useFavorites'
 
 export default function Favorites() {
   const [loading, setLoading] = useState(true)
@@ -10,6 +11,7 @@ export default function Favorites() {
   const [myFavorites, setMyFavorites] = useState([])
   const [othersFavorites, setOthersFavorites] = useState([])
   const { user, getIdTokenClaims } = useAuth0()
+  const { getFavorites, removeFavorite } = useFavorites()
 
   useEffect(() => {
     const fetchFavorites = async () => {
@@ -58,12 +60,16 @@ export default function Favorites() {
           throw new Error(data.errors[0].message)
         }
 
-        // Simulate favorites - in real app, this would come from a favorites table
+        // Get user's actual favorites from the hook
+        const userFavorites = getFavorites()
         const allDreams = data.data.allDreams
         
+        // Filter dreams that are actually favorited by the user
+        const favoritedDreams = allDreams.filter(dream => userFavorites.has(dream.id))
+        
         // Separate user's own dreams from others' dreams
-        const myDreams = allDreams.filter(dream => dream.user.id === user.sub).slice(0, 2)
-        const othersDreams = allDreams.filter(dream => dream.user.id !== user.sub).slice(0, 3)
+        const myDreams = favoritedDreams.filter(dream => dream.user.id === user.sub)
+        const othersDreams = favoritedDreams.filter(dream => dream.user.id !== user.sub)
         
         setMyFavorites(myDreams)
         setOthersFavorites(othersDreams)
@@ -79,7 +85,9 @@ export default function Favorites() {
   }, [getIdTokenClaims])
 
   const handleRemoveFavorite = (dreamId) => {
-    // In a real app, this would make an API call to remove from favorites
+    // Remove from favorites using the hook
+    removeFavorite(dreamId)
+    // Update local state
     setMyFavorites(prev => prev.filter(dream => dream.id !== dreamId))
     setOthersFavorites(prev => prev.filter(dream => dream.id !== dreamId))
   }
