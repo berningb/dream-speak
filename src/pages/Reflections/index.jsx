@@ -2,9 +2,10 @@ import { useState } from 'react'
 import Layout from '../../components/Layout'
 import Analytics from './components/Analytics'
 import Notes from './components/Notes'
+import Favorites from './components/Favorites'
 
 export default function Reflections() {
-  const [activeView, setActiveView] = useState('landing') // 'landing', 'analytics', 'notes'
+  const [activeView, setActiveView] = useState('landing') // 'landing', 'analytics', 'notes', 'favorites'
 
   if (activeView === 'analytics') {
     return <Analytics />
@@ -14,6 +15,10 @@ export default function Reflections() {
     return <Notes />
   }
 
+  if (activeView === 'favorites') {
+    return <Favorites />
+  }
+
   return (
     <Layout>
       <div className='flex flex-col items-center justify-start h-screen'>
@@ -21,8 +26,8 @@ export default function Reflections() {
         <p className='text-slate-600 text-center mb-8 max-w-2xl'>
           Discover patterns, track your dream journey, and reflect on your experiences
         </p>
-        <div className='max-w-4xl mx-auto px-4'>
-          <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
+        <div className='max-w-6xl mx-auto px-4'>
+          <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
             <div className='bg-gradient-to-br from-blue-50 to-indigo-100 rounded-xl p-6 border border-blue-200 shadow-lg hover:shadow-xl transition-all'>
               <div className='text-3xl mb-4'>📊</div>
               <h2 className='text-xl font-semibold mb-4 text-slate-800'>Dream Analytics</h2>
@@ -60,6 +65,26 @@ export default function Reflections() {
                 onClick={() => setActiveView('notes')}
               >
                 Write Notes
+              </button>
+            </div>
+            
+            <div className='bg-gradient-to-br from-yellow-50 to-orange-100 rounded-xl p-6 border border-yellow-200 shadow-lg hover:shadow-xl transition-all'>
+              <div className='text-3xl mb-4'>⭐</div>
+              <h2 className='text-xl font-semibold mb-4 text-slate-800'>Favorites</h2>
+              <p className='text-slate-600 mb-4'>
+                View and manage your favorite dreams from your collection and others
+              </p>
+              <ul className='text-sm text-slate-600 mb-6 space-y-2'>
+                <li>• Your favorite dreams</li>
+                <li>• Loved dreams from others</li>
+                <li>• Quick access to special dreams</li>
+                <li>• Personal dream collection</li>
+              </ul>
+              <button 
+                className='btn btn-warning w-full bg-gradient-to-r from-yellow-500 to-orange-600 border-0 hover:from-yellow-600 hover:to-orange-700'
+                onClick={() => setActiveView('favorites')}
+              >
+                View Favorites
               </button>
             </div>
           </div>

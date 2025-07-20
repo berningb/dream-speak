@@ -1,17 +1,56 @@
 import { formatDreamDate } from '../utils'
 
-export default function DreamCard({ dream, showAuthor = true, onClick }) {
+export default function DreamCard({ dream, showAuthor = true, onClick, showFavoriteButton = false, isFavorited = false, onFavoriteToggle, showCommentButton = false, onCommentClick }) {
   const handleClick = () => {
     if (onClick) {
       onClick(dream)
     }
   }
 
+  const handleFavoriteClick = (e) => {
+    e.stopPropagation()
+    if (onFavoriteToggle) {
+      onFavoriteToggle(dream.id)
+    }
+  }
+
+  const handleCommentClick = (e) => {
+    e.stopPropagation()
+    if (onCommentClick) {
+      onCommentClick(dream.id)
+    }
+  }
+
   return (
     <div 
-      className={`bg-base-200 rounded-lg p-4 h-full flex flex-col ${onClick ? 'cursor-pointer hover:bg-base-300 transition-colors' : ''}`}
+      className={`bg-base-200 rounded-lg p-4 h-full flex flex-col relative ${onClick ? 'cursor-pointer hover:bg-base-300 transition-colors' : ''}`}
       onClick={handleClick}
     >
+      <div className='absolute top-2 right-2 flex space-x-1'>
+        {showCommentButton && (
+          <button 
+            className='btn btn-sm btn-circle btn-ghost bg-white/80 hover:bg-blue-100 transition-all'
+            onClick={handleCommentClick}
+            title='View comments'
+          >
+            💬
+          </button>
+        )}
+        {showFavoriteButton && (
+          <button 
+            className={`btn btn-sm btn-circle transition-all ${
+              isFavorited 
+                ? 'btn-warning bg-yellow-500 hover:bg-yellow-600' 
+                : 'btn-ghost bg-white/80 hover:bg-yellow-100'
+            }`}
+            onClick={handleFavoriteClick}
+            title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+          >
+            {isFavorited ? '⭐' : '☆'}
+          </button>
+        )}
+      </div>
+      
       <div className='flex justify-between items-start mb-3'>
         <h3 className='text-lg font-semibold line-clamp-2'>{dream.title}</h3>
         <div className='text-sm text-base-content/50 flex-shrink-0 ml-2'>

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useAuth0 } from '@auth0/auth0-react'
 import Layout from '../../components/Layout'
 import DreamCard from '../../components/DreamCard'
+import Comments from '../../components/Comments'
 
 export default function Explore() {
   const [dreams, setDreams] = useState([])
@@ -11,6 +12,9 @@ export default function Explore() {
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedMood, setSelectedMood] = useState('')
   const [selectedTag, setSelectedTag] = useState('')
+  const [favorites, setFavorites] = useState(new Set()) // Track favorite dream IDs
+  const [commentsOpen, setCommentsOpen] = useState(false)
+  const [selectedDreamId, setSelectedDreamId] = useState(null)
   const { getIdTokenClaims } = useAuth0()
 
   // Get unique moods and tags from dreams
@@ -107,6 +111,23 @@ export default function Explore() {
     setSelectedTag('')
   }
 
+  const handleFavoriteToggle = (dreamId) => {
+    setFavorites(prev => {
+      const newFavorites = new Set(prev)
+      if (newFavorites.has(dreamId)) {
+        newFavorites.delete(dreamId)
+      } else {
+        newFavorites.add(dreamId)
+      }
+      return newFavorites
+    })
+  }
+
+  const handleCommentClick = (dreamId) => {
+    setSelectedDreamId(dreamId)
+    setCommentsOpen(true)
+  }
+
   if (loading) {
     return (
       <Layout>
@@ -143,15 +164,20 @@ export default function Explore() {
         <h1 className='text-4xl font-bold text-center py-6'>Explore Dreams</h1>
         <div className='max-w-6xl mx-auto px-4 w-full'>
           {/* Search and Filter Section */}
-          <div className='bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6 mb-8 border border-blue-200 shadow-lg'>
+          <div className='bg-gradient-to-br from-indigo-50 via-purple-50 to-pink-50 rounded-xl p-6 mb-8 border border-indigo-200 shadow-lg'>
             <div className='space-y-6'>
+              <div className='text-center mb-6'>
+                <h2 className='text-2xl font-bold text-slate-800 mb-2'>🔍 Discover Dreams</h2>
+                <p className='text-slate-600'>Search and filter through the dream community</p>
+              </div>
+              
               <div>
                 <label className='label'>
-                  <span className='label-text font-semibold text-lg'>🔍 Search Dreams</span>
+                  <span className='label-text font-semibold text-lg text-slate-700'>✨ Search Dreams</span>
                 </label>
                 <input 
                   type='text' 
-                  className='input input-bordered w-full bg-white border-blue-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all' 
+                  className='input input-bordered w-full bg-white/80 backdrop-blur-sm border-indigo-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all shadow-sm' 
                   placeholder='Search by title, content, or tags...'
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -161,10 +187,10 @@ export default function Explore() {
               <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
                 <div>
                   <label className='label'>
-                    <span className='label-text font-medium'>😊 Mood</span>
+                    <span className='label-text font-medium text-slate-700'>😊 Mood</span>
                   </label>
                   <select 
-                    className='select select-bordered w-full bg-white border-blue-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all'
+                    className='select select-bordered w-full bg-white/80 backdrop-blur-sm border-indigo-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all shadow-sm'
                     value={selectedMood}
                     onChange={(e) => setSelectedMood(e.target.value)}
                   >
@@ -177,10 +203,10 @@ export default function Explore() {
                 
                 <div>
                   <label className='label'>
-                    <span className='label-text font-medium'>🏷️ Tags</span>
+                    <span className='label-text font-medium text-slate-700'>🏷️ Tags</span>
                   </label>
                   <select 
-                    className='select select-bordered w-full bg-white border-blue-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all'
+                    className='select select-bordered w-full bg-white/80 backdrop-blur-sm border-indigo-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all shadow-sm'
                     value={selectedTag}
                     onChange={(e) => setSelectedTag(e.target.value)}
                   >
@@ -193,10 +219,10 @@ export default function Explore() {
                 
                 <div>
                   <label className='label'>
-                    <span className='label-text font-medium'>Actions</span>
+                    <span className='label-text font-medium text-slate-700'>Actions</span>
                   </label>
                   <button 
-                    className='btn btn-outline w-full hover:bg-blue-100 transition-colors'
+                    className='btn w-full bg-gradient-to-r from-indigo-500 to-purple-600 border-0 hover:from-indigo-600 hover:to-purple-700 text-white shadow-md hover:shadow-lg transition-all'
                     onClick={clearFilters}
                   >
                     🗑️ Clear Filters
@@ -228,6 +254,11 @@ export default function Explore() {
                     key={dream.id} 
                     dream={dream} 
                     showAuthor={true}
+                    showFavoriteButton={true}
+                    isFavorited={favorites.has(dream.id)}
+                    onFavoriteToggle={handleFavoriteToggle}
+                    showCommentButton={true}
+                    onCommentClick={handleCommentClick}
                   />
                 ))}
               </div>
@@ -235,6 +266,16 @@ export default function Explore() {
           </div>
         </div>
       </div>
+      
+      {/* Comments Modal */}
+      <Comments 
+        dreamId={selectedDreamId}
+        isOpen={commentsOpen}
+        onClose={() => {
+          setCommentsOpen(false)
+          setSelectedDreamId(null)
+        }}
+      />
     </Layout>
   )
 } 
