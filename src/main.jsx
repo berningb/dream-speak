@@ -25,43 +25,81 @@ import Settings from './pages/Settings'
 // Initialize theme immediately
 initializeTheme();
 
+// Check if we're in development mode (HTTP)
+const isDevelopment = window.location.protocol === 'http:';
+
+// Development wrapper component that bypasses Auth0
+const DevelopmentWrapper = ({ children }) => {
+  return (
+    <Router>
+      <Routes>
+        {/* Main routes */}
+        <Route path='/' element={<Home />} />
+        <Route path='/home' element={<Home />} />
+        <Route path='/my-dreams' element={<MyDreams />} />
+        <Route path='/explore' element={<Explore />} />
+        <Route path='/reflections' element={<Reflections />} />
+        <Route path='/reflections/analytics' element={<Analytics />} />
+        <Route path='/reflections/favorites' element={<FavoritesAndNotes />} />
+        <Route path='/connections' element={<Connections />} />
+        <Route path='/log' element={<LogDream />} />
+        <Route path='/settings' element={<Settings />} />
+        
+        {/* Sub-routes */}
+        <Route path='/connections/whispers' element={<Whispers />} />
+        <Route path='/connections/reactions' element={<Reactions />} />
+        <Route path='/connections/circles' element={<Circles />} />
+        
+        {/* Dream detail route */}
+        <Route path='/dream/:id' element={<Dream />} />
+        
+        {/* Legacy routes for backward compatibility */}
+        <Route path='/all-dreams' element={<Explore />} />
+        <Route path='/user' element={<Settings />} />
+      </Routes>
+    </Router>
+  );
+};
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <Auth0Provider
-      domain={import.meta.env.VITE_CLIENT_DOMAIN}
-      clientId={import.meta.env.VITE_CLIENT_ID}
-      audience={import.meta.env.VITE_API_IDENTIFIER}
-      authorizationParams={{ redirect_uri: window.location.origin }}
-    >
-      <Router>
-        <Routes>
-          {/* Main routes */}
-          <Route path='/' element={<Home />} />
-          <Route path='/home' element={<Home />} />
-          <Route path='/my-dreams' element={<MyDreams />} />
-          <Route path='/explore' element={<Explore />} />
-          <Route path='/reflections' element={<Reflections />} />
-          <Route path='/reflections/analytics' element={<Analytics />} />
-          <Route path='/reflections/favorites' element={<FavoritesAndNotes />} />
-          <Route path='/connections' element={<Connections />} />
-          <Route path='/log' element={<LogDream />} />
-          <Route path='/settings' element={<Settings />} />
-          
-          {/* Sub-routes */}
-
-
-          <Route path='/connections/whispers' element={<Whispers />} />
-          <Route path='/connections/reactions' element={<Reactions />} />
-          <Route path='/connections/circles' element={<Circles />} />
-          
-          {/* Dream detail route */}
-          <Route path='/dream/:id' element={<Dream />} />
-          
-          {/* Legacy routes for backward compatibility */}
-          <Route path='/all-dreams' element={<Explore />} />
-          <Route path='/user' element={<Settings />} />
-        </Routes>
-      </Router>
-    </Auth0Provider>
+    {isDevelopment ? (
+      <DevelopmentWrapper />
+    ) : (
+      <Auth0Provider
+        domain={import.meta.env.VITE_CLIENT_DOMAIN}
+        clientId={import.meta.env.VITE_CLIENT_ID}
+        audience={import.meta.env.VITE_API_IDENTIFIER}
+        authorizationParams={{ redirect_uri: window.location.origin }}
+      >
+        <Router>
+          <Routes>
+            {/* Main routes */}
+            <Route path='/' element={<Home />} />
+            <Route path='/home' element={<Home />} />
+            <Route path='/my-dreams' element={<MyDreams />} />
+            <Route path='/explore' element={<Explore />} />
+            <Route path='/reflections' element={<Reflections />} />
+            <Route path='/reflections/analytics' element={<Analytics />} />
+            <Route path='/reflections/favorites' element={<FavoritesAndNotes />} />
+            <Route path='/connections' element={<Connections />} />
+            <Route path='/log' element={<LogDream />} />
+            <Route path='/settings' element={<Settings />} />
+            
+            {/* Sub-routes */}
+            <Route path='/connections/whispers' element={<Whispers />} />
+            <Route path='/connections/reactions' element={<Reactions />} />
+            <Route path='/connections/circles' element={<Circles />} />
+            
+            {/* Dream detail route */}
+            <Route path='/dream/:id' element={<Dream />} />
+            
+            {/* Legacy routes for backward compatibility */}
+            <Route path='/all-dreams' element={<Explore />} />
+            <Route path='/user' element={<Settings />} />
+          </Routes>
+        </Router>
+      </Auth0Provider>
+    )}
   </StrictMode>
 )

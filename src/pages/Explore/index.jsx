@@ -4,6 +4,7 @@ import Layout from '../../components/Layout'
 import DreamCard from '../../components/DreamCard'
 import Comments from '../../components/Comments'
 import useDatabaseFavorites from '../../hooks/useDatabaseFavorites'
+import { getApiUrl } from '../../utils'
 
 export default function Explore() {
   const [dreams, setDreams] = useState([])
@@ -15,8 +16,10 @@ export default function Explore() {
   const [selectedTag, setSelectedTag] = useState('')
   const [commentsOpen, setCommentsOpen] = useState(false)
   const [selectedDreamId, setSelectedDreamId] = useState(null)
-  const { getIdTokenClaims, isLoading: auth0Loading } = useAuth0()
+  const { getIdTokenClaims, isAuthenticated, loginWithRedirect } = useAuth0()
   const { isFavorited, toggleFavorite } = useDatabaseFavorites()
+
+
 
   // Get unique moods and tags from dreams
   const moods = [...new Set(dreams.map(dream => dream.mood).filter(Boolean))]
@@ -24,21 +27,28 @@ export default function Explore() {
 
   useEffect(() => {
     const fetchDreams = async () => {
-      if (auth0Loading) return
-      
       try {
         setLoading(true)
-        const token = await getIdTokenClaims()
-        if (!token || !token.__raw) {
-          throw new Error('Token not available')
+        
+        // For non-authenticated users, we'll need to create a public endpoint or modify the backend
+        // For now, let's try to fetch without authentication
+        const headers = {
+          'Content-Type': 'application/json'
         }
         
-        const response = await fetch('http://localhost:4000/graphql', {
+        // Add authorization header only if user is authenticated
+        if (isAuthenticated) {
+          const token = await getIdTokenClaims()
+          if (token && token.__raw) {
+            headers['Authorization'] = `Bearer ${token.__raw}`
+          }
+        }
+        
+        const apiUrl = getApiUrl()
+        
+        const response = await fetch(apiUrl, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token.__raw}`
-          },
+          headers,
           body: JSON.stringify({
             query: `
               query {
@@ -71,6 +81,10 @@ export default function Explore() {
           throw new Error(data.errors[0].message)
         }
 
+        if (!data.data || !data.data.allDreams) {
+          throw new Error('No dreams data received from server')
+        }
+
         // Filter to only show public dreams
         const publicDreams = data.data.allDreams.filter(dream => dream.isPublic)
         setDreams(publicDreams)
@@ -83,10 +97,8 @@ export default function Explore() {
       }
     }
 
-    if (!auth0Loading) {
-      fetchDreams()
-    }
-  }, [getIdTokenClaims, auth0Loading])
+    fetchDreams()
+  }, []) // Only fetch once on component mount since we're getting public dreams
 
   // Filter dreams based on search criteria
   useEffect(() => {
@@ -120,10 +132,18 @@ export default function Explore() {
   }
 
   const handleFavoriteToggle = (dreamId) => {
+    if (!isAuthenticated) {
+      loginWithRedirect()
+      return
+    }
     toggleFavorite(dreamId)
   }
 
   const handleCommentClick = (dreamId) => {
+    if (!isAuthenticated) {
+      loginWithRedirect()
+      return
+    }
     setSelectedDreamId(dreamId)
     setCommentsOpen(true)
   }
@@ -163,6 +183,25 @@ export default function Explore() {
       <div className='flex flex-col items-center justify-start min-h-screen'>
         <h1 className='text-4xl font-bold text-center py-6'>Explore Dreams</h1>
         <div className='max-w-6xl mx-auto px-4 w-full'>
+          
+          {/* Sign-up prompt for non-authenticated users */}
+          {!isAuthenticated && (
+            <div className='bg-info text-info-content p-6 rounded-lg mb-6 text-center'>
+              <div className='flex flex-col items-center'>
+                <div className='mb-4'>
+                  <span className='font-semibold text-lg'>👋 Welcome to DreamSpeak!</span>
+                  <p className='text-base mt-2'>You can browse and read dreams. Sign up to favorite, comment, and share your own dreams!</p>
+                </div>
+                <button 
+                  className='btn btn-primary btn-lg w-full max-w-xs'
+                  onClick={() => loginWithRedirect()}
+                >
+                  Sign Up / Log In
+                </button>
+              </div>
+            </div>
+          )}
+          
           {/* Search and Filter Section */}
           <div className='card bg-base-100 shadow-xl border border-base-300 mb-8'>
             <div className='card-body'>
@@ -242,6 +281,7 @@ export default function Explore() {
                 {filteredDreams.length} dream{filteredDreams.length !== 1 ? 's' : ''} found
               </span>
             </div>
+
             
             {filteredDreams.length === 0 ? (
               <div className='text-center py-12 bg-slate-50 rounded-xl border border-slate-200'>
@@ -256,10 +296,10 @@ export default function Explore() {
                     key={dream.id} 
                     dream={dream} 
                     showAuthor={true}
-                    showFavoriteButton={true}
-                    isFavorited={isFavorited(dream.id)}
+                    showFavoriteButton={isAuthenticated}
+                    isFavorited={isAuthenticated ? isFavorited(dream.id) : false}
                     onFavoriteToggle={handleFavoriteToggle}
-                    showCommentButton={true}
+                    showCommentButton={isAuthenticated}
                     onCommentClick={handleCommentClick}
                   />
                 ))}
@@ -269,15 +309,17 @@ export default function Explore() {
         </div>
       </div>
       
-      {/* Comments Modal */}
-      <Comments 
-        dreamId={selectedDreamId}
-        isOpen={commentsOpen}
-        onClose={() => {
-          setCommentsOpen(false)
-          setSelectedDreamId(null)
-        }}
-      />
+      {/* Comments Modal - only show if authenticated */}
+      {isAuthenticated && (
+        <Comments 
+          dreamId={selectedDreamId}
+          isOpen={commentsOpen}
+          onClose={() => {
+            setCommentsOpen(false)
+            setSelectedDreamId(null)
+          }}
+        />
+      )}
     </Layout>
   )
 } 

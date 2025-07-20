@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useAuth0 } from '@auth0/auth0-react'
 import Layout from '../../components/Layout'
-import { formatFullDate } from '../../utils'
+import { formatFullDate, getApiUrl } from '../../utils'
 
 export default function Settings() {
   const [user, setUser] = useState(null)
@@ -22,7 +22,7 @@ export default function Settings() {
         setLoading(true)
         const token = await getIdTokenClaims()
         
-        const response = await fetch('http://localhost:4000/graphql', {
+        const response = await fetch(getApiUrl(), {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -82,7 +82,7 @@ export default function Settings() {
       setSaveLoading(true)
       const token = await getIdTokenClaims()
       
-      const response = await fetch('http://localhost:4000/graphql', {
+      const response = await fetch(getApiUrl(), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -138,7 +138,7 @@ export default function Settings() {
       setSaveLoading(true)
       const token = await getIdTokenClaims()
       
-      const response = await fetch('http://localhost:4000/graphql', {
+      const response = await fetch(getApiUrl(), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

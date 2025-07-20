@@ -80,3 +80,10 @@ export const themes = [
     { name: 'coffee', colors: ['#6b7280', '#4b5563', '#374151', '#1f2937'] },
     { name: 'winter', colors: ['#60a5fa', '#3b82f6', '#2563eb', '#1d4ed8'] },
 ];
+
+// Function to get the dynamic API URL based on current protocol and hostname
+export const getApiUrl = () => {
+  const apiProtocol = window.location.protocol === 'https:' ? 'https:' : 'http:'
+  const apiHost = window.location.hostname === '192.168.0.65' ? '192.168.0.65' : 'localhost'
+  return `${apiProtocol}//${apiHost}:4000/graphql`
+}

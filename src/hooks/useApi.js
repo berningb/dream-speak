@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useAuth0 } from '@auth0/auth0-react'
+import { getApiUrl } from '../utils'
 
 export default function useApi() {
   const [loading, setLoading] = useState(true)
@@ -21,7 +22,7 @@ export default function useApi() {
         throw new Error('Token not available')
       }
 
-      const response = await fetch('http://localhost:4000/graphql', {
+      const response = await fetch(getApiUrl(), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
