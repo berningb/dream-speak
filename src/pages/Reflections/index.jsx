@@ -1,19 +1,6 @@
-import { useState } from 'react'
 import Layout from '../../components/Layout'
-import Analytics from './components/Analytics'
-import FavoritesAndNotes from './components/FavoritesAndNotes'
 
 export default function Reflections() {
-  const [activeView, setActiveView] = useState('landing') // 'landing', 'analytics', 'favorites-notes'
-
-  if (activeView === 'analytics') {
-    return <Analytics onBack={() => setActiveView('landing')} />
-  }
-
-  if (activeView === 'favorites-notes') {
-    return <FavoritesAndNotes onBack={() => setActiveView('landing')} />
-  }
-
   return (
     <Layout>
       <div className='flex flex-col items-center justify-start h-screen'>
@@ -35,12 +22,12 @@ export default function Reflections() {
                 <li>• Recurring themes and symbols</li>
                 <li>• Color and place analysis</li>
               </ul>
-              <button 
+              <a 
+                href='/reflections/analytics'
                 className='btn btn-primary w-full bg-gradient-to-r from-blue-500 to-indigo-600 border-0 hover:from-blue-600 hover:to-indigo-700'
-                onClick={() => setActiveView('analytics')}
               >
                 View Analytics
-              </button>
+              </a>
             </div>
             
             <div className='bg-gradient-to-br from-yellow-50 to-orange-100 rounded-xl p-6 border border-yellow-200 shadow-lg hover:shadow-xl transition-all'>
@@ -55,12 +42,12 @@ export default function Reflections() {
                 <li>• Personal notes with markdown</li>
                 <li>• Dream interpretations</li>
               </ul>
-              <button 
+              <a 
+                href='/reflections/favorites'
                 className='btn btn-warning w-full bg-gradient-to-r from-yellow-500 to-orange-600 border-0 hover:from-yellow-600 hover:to-orange-700'
-                onClick={() => setActiveView('favorites-notes')}
               >
                 View Favorites & Notes
-              </button>
+              </a>
             </div>
           </div>
         </div>

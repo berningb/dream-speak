@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useAuth0 } from '@auth0/auth0-react'
+import { useNavigate } from 'react-router-dom'
 import Layout from '../../../components/Layout'
 
-export default function Analytics({ onBack }) {
+export default function Analytics() {
+  const navigate = useNavigate()
   const [dreams, setDreams] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -133,7 +135,7 @@ export default function Analytics({ onBack }) {
         <div className='flex flex-col items-center justify-start h-screen'>
           <div className='w-full max-w-6xl mx-auto px-4 mb-4'>
             <button 
-              onClick={onBack}
+              onClick={() => navigate('/reflections')}
               className='btn btn-outline btn-sm mb-4'
             >
               ← Back to Reflections
@@ -156,7 +158,7 @@ export default function Analytics({ onBack }) {
         <div className='flex flex-col items-center justify-start h-screen'>
           <div className='w-full max-w-6xl mx-auto px-4 mb-4'>
             <button 
-              onClick={onBack}
+              onClick={() => navigate('/reflections')}
               className='btn btn-outline btn-sm mb-4'
             >
               ← Back to Reflections
@@ -178,7 +180,7 @@ export default function Analytics({ onBack }) {
       <div className='flex flex-col items-center justify-start min-h-screen'>
         <div className='w-full max-w-6xl mx-auto px-4 mb-4'>
           <button 
-            onClick={onBack}
+            onClick={() => navigate('/reflections')}
             className='btn btn-outline btn-sm mb-4'
           >
             ← Back to Reflections

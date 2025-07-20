@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useAuth0 } from '@auth0/auth0-react'
+import { useNavigate } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import Layout from '../../../components/Layout'
@@ -67,7 +68,8 @@ const GET_NOTE_QUERY = `
   }
 `
 
-export default function FavoritesAndNotes({ onBack }) {
+export default function FavoritesAndNotes() {
+  const navigate = useNavigate()
   const [selectedDream, setSelectedDream] = useState(null)
   const [noteContent, setNoteContent] = useState('')
   const [currentNote, setCurrentNote] = useState(null)
@@ -177,7 +179,7 @@ export default function FavoritesAndNotes({ onBack }) {
         <div className='flex flex-col items-center justify-start h-screen'>
           <div className='w-full max-w-6xl mx-auto px-4 mb-4'>
             <button 
-              onClick={onBack}
+              onClick={() => navigate('/reflections')}
               className='btn btn-outline btn-sm mb-4'
             >
               ← Back to Reflections
@@ -200,7 +202,7 @@ export default function FavoritesAndNotes({ onBack }) {
         <div className='flex flex-col items-center justify-start h-screen'>
           <div className='w-full max-w-6xl mx-auto px-4 mb-4'>
             <button 
-              onClick={onBack}
+              onClick={() => navigate('/reflections')}
               className='btn btn-outline btn-sm mb-4'
             >
               ← Back to Reflections
@@ -222,7 +224,7 @@ export default function FavoritesAndNotes({ onBack }) {
       <div className='flex flex-col items-center justify-start min-h-screen'>
         <div className='w-full max-w-7xl mx-auto px-4 mb-4'>
           <button 
-            onClick={onBack}
+            onClick={() => navigate('/reflections')}
             className='btn btn-outline btn-sm mb-4'
           >
             ← Back to Reflections

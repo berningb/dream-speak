@@ -11,6 +11,8 @@ import MyDreams from './pages/MyDreams'
 import Dream from './pages/Dream'
 import Explore from './pages/Explore'
 import Reflections from './pages/Reflections'
+import Analytics from './pages/Reflections/components/Analytics'
+import FavoritesAndNotes from './pages/Reflections/components/FavoritesAndNotes'
 
 
 import Connections from './pages/Connections'
@@ -39,6 +41,8 @@ createRoot(document.getElementById('root')).render(
           <Route path='/my-dreams' element={<MyDreams />} />
           <Route path='/explore' element={<Explore />} />
           <Route path='/reflections' element={<Reflections />} />
+          <Route path='/reflections/analytics' element={<Analytics />} />
+          <Route path='/reflections/favorites' element={<FavoritesAndNotes />} />
           <Route path='/connections' element={<Connections />} />
           <Route path='/log' element={<LogDream />} />
           <Route path='/settings' element={<Settings />} />
