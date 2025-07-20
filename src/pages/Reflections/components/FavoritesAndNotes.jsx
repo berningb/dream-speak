@@ -321,37 +321,64 @@ export default function FavoritesAndNotes() {
             <div className='bg-base-100 rounded-xl p-6 border border-base-300 shadow-lg'>
               <div className='flex justify-between items-center mb-4'>
                 <h3 className='text-xl font-semibold text-base-content'>📝 Personal Notes</h3>
-                <div className='dropdown dropdown-end'>
-                  <div tabIndex={0} role='button' className='btn btn-sm btn-outline btn-primary' title='Writing Prompts & Tips'>
-                    💡 Tips
+                <div className='flex gap-2'>
+                  <div className='dropdown dropdown-end'>
+                    <div tabIndex={0} role='button' className='btn btn-sm btn-outline btn-primary' title='Writing Prompts'>
+                      💭 Prompts
+                    </div>
+                    <div tabIndex={0} className='dropdown-content z-[1] menu p-4 shadow-lg bg-base-100 rounded-box w-80 border border-base-300'>
+                      <h4 className='font-semibold mb-3 text-base-content'>💭 Writing Prompts</h4>
+                      <div className='space-y-3'>
+                        <div>
+                          <h5 className='font-medium text-base-content text-sm mb-1'>Interpretation</h5>
+                          <ul className='text-xs text-base-content/70 space-y-1'>
+                            <li>• What do you think this dream means?</li>
+                            <li>• How does it relate to your current life?</li>
+                            <li>• What emotions did it bring up?</li>
+                          </ul>
+                        </div>
+                        <div>
+                          <h5 className='font-medium text-base-content text-sm mb-1'>Reflection</h5>
+                          <ul className='text-xs text-base-content/70 space-y-1'>
+                            <li>• What patterns do you notice?</li>
+                            <li>• How has this dream affected you?</li>
+                            <li>• What insights can you take from it?</li>
+                          </ul>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div tabIndex={0} className='dropdown-content z-[1] menu p-4 shadow-lg bg-base-100 rounded-box w-80 border border-base-300'>
-                    <h4 className='font-semibold mb-3 text-base-content'>💡 Writing Prompts & Tips</h4>
-                    <div className='space-y-3'>
-                      <div>
-                        <h5 className='font-medium text-base-content text-sm mb-1'>Interpretation</h5>
-                        <ul className='text-xs text-base-content/70 space-y-1'>
-                          <li>• What do you think this dream means?</li>
-                          <li>• How does it relate to your current life?</li>
-                          <li>• What emotions did it bring up?</li>
-                        </ul>
-                      </div>
-                      <div>
-                        <h5 className='font-medium text-base-content text-sm mb-1'>Reflection</h5>
-                        <ul className='text-xs text-base-content/70 space-y-1'>
-                          <li>• What patterns do you notice?</li>
-                          <li>• How has this dream affected you?</li>
-                          <li>• What insights can you take from it?</li>
-                        </ul>
-                      </div>
-                      <div>
-                        <h5 className='font-medium text-base-content text-sm mb-1'>Markdown Tips</h5>
-                        <ul className='text-xs text-base-content/70 space-y-1'>
-                          <li>• **Bold** for emphasis</li>
-                          <li>• *Italic* for subtle emphasis</li>
-                          <li>• ## Headers for organization</li>
-                          <li>• - Lists for thoughts</li>
-                        </ul>
+                  <div className='dropdown dropdown-end'>
+                    <div tabIndex={0} role='button' className='btn btn-sm btn-outline btn-secondary' title='Markdown Tips'>
+                      📝 Markdown
+                    </div>
+                    <div tabIndex={0} className='dropdown-content z-[1] menu p-4 shadow-lg bg-base-100 rounded-box w-80 border border-base-300'>
+                      <h4 className='font-semibold mb-3 text-base-content'>📝 Markdown Tips</h4>
+                      <div className='space-y-3'>
+                        <div>
+                          <h5 className='font-medium text-base-content text-sm mb-1'>Text Formatting</h5>
+                          <ul className='text-xs text-base-content/70 space-y-1'>
+                            <li>• **Bold text** for emphasis</li>
+                            <li>• *Italic text* for subtle emphasis</li>
+                            <li>• ~~Strikethrough~~ for corrections</li>
+                          </ul>
+                        </div>
+                        <div>
+                          <h5 className='font-medium text-base-content text-sm mb-1'>Structure</h5>
+                          <ul className='text-xs text-base-content/70 space-y-1'>
+                            <li>• # Main heading</li>
+                            <li>• ## Sub heading</li>
+                            <li>• ### Section heading</li>
+                          </ul>
+                        </div>
+                        <div>
+                          <h5 className='font-medium text-base-content text-sm mb-1'>Lists & Quotes</h5>
+                          <ul className='text-xs text-base-content/70 space-y-1'>
+                            <li>• - Bullet points</li>
+                            <li>• 1. Numbered lists</li>
+                            <li>• &gt; Blockquotes for important thoughts</li>
+                          </ul>
+                        </div>
                       </div>
                     </div>
                   </div>
