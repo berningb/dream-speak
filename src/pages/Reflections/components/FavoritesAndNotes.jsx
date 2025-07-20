@@ -210,19 +210,19 @@ export default function FavoritesAndNotes() {
             {/* Left Side - Favorites List */}
             <div className='space-y-6'>
               {/* My Favorites */}
-              <div className='bg-white rounded-xl p-6 border border-slate-200 shadow-lg'>
+              <div className='bg-base-100 rounded-xl p-6 border border-base-300 shadow-lg'>
                 <div className='flex justify-between items-center mb-4'>
-                  <h3 className='text-xl font-semibold text-slate-800'>My Favorite Dreams</h3>
-                  <span className='text-slate-600 bg-slate-100 px-3 py-1 rounded-full text-sm font-medium'>
+                  <h3 className='text-xl font-semibold text-base-content'>My Favorite Dreams</h3>
+                  <span className='text-base-content/70 bg-base-200 px-3 py-1 rounded-full text-sm font-medium'>
                     {myFavorites.length} favorite{myFavorites.length !== 1 ? 's' : ''}
                   </span>
                 </div>
                 
                 {myFavorites.length === 0 ? (
-                  <div className='text-center py-8 bg-gradient-to-br from-yellow-50 to-orange-50 rounded-xl border border-yellow-200'>
+                  <div className='text-center py-8 bg-gradient-to-br from-warning/20 to-error/20 rounded-xl border border-warning/30'>
                     <div className='text-4xl mb-2'>⭐</div>
-                    <p className='text-slate-700 mb-2'>No favorites yet</p>
-                    <p className='text-slate-600 text-sm'>Start adding dreams to your favorites</p>
+                    <p className='text-base-content mb-2'>No favorites yet</p>
+                    <p className='text-base-content/70 text-sm'>Start adding dreams to your favorites</p>
                   </div>
                 ) : (
                   <div className='space-y-3 max-h-64 overflow-y-auto'>
@@ -231,20 +231,20 @@ export default function FavoritesAndNotes() {
                         key={dream.id}
                         className={`p-4 rounded-lg border cursor-pointer transition-all hover:shadow-md ${
                           selectedDream?.id === dream.id 
-                            ? 'border-purple-300 bg-purple-50 shadow-md' 
-                            : 'border-slate-200 hover:border-slate-300'
+                            ? 'border-primary bg-primary/10 shadow-md' 
+                            : 'border-base-300 hover:border-base-400'
                         }`}
                         onClick={() => handleDreamSelect(dream)}
                       >
                         <div className='flex justify-between items-start mb-2'>
-                          <h4 className='font-semibold text-slate-800'>{dream.title}</h4>
-                          <span className='text-sm text-slate-500'>{formatDate(dream.date)}</span>
+                          <h4 className='font-semibold text-base-content'>{dream.title}</h4>
+                          <span className='text-sm text-base-content/60'>{formatDate(dream.date)}</span>
                         </div>
-                        <p className='text-sm text-slate-600 line-clamp-2 mb-2'>{dream.description}</p>
+                        <p className='text-sm text-base-content/70 line-clamp-2 mb-2'>{dream.description}</p>
                         <div className='flex justify-between items-center'>
                           <div className='flex flex-wrap gap-1'>
                             {dream.mood && (
-                              <span className='bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full'>
+                              <span className='bg-primary/20 text-primary text-xs px-2 py-1 rounded-full'>
                                 {dream.mood}
                               </span>
                             )}
@@ -267,19 +267,19 @@ export default function FavoritesAndNotes() {
               </div>
 
               {/* Others' Favorites */}
-              <div className='bg-white rounded-xl p-6 border border-slate-200 shadow-lg'>
+              <div className='bg-base-100 rounded-xl p-6 border border-base-300 shadow-lg'>
                 <div className='flex justify-between items-center mb-4'>
-                  <h3 className='text-xl font-semibold text-slate-800'>Dreams I Love from Others</h3>
-                  <span className='text-slate-600 bg-slate-100 px-3 py-1 rounded-full text-sm font-medium'>
+                  <h3 className='text-xl font-semibold text-base-content'>Dreams I Love from Others</h3>
+                  <span className='text-base-content/70 bg-base-200 px-3 py-1 rounded-full text-sm font-medium'>
                     {othersFavorites.length} favorite{othersFavorites.length !== 1 ? 's' : ''}
                   </span>
                 </div>
                 
                 {othersFavorites.length === 0 ? (
-                  <div className='text-center py-8 bg-gradient-to-br from-purple-50 to-pink-50 rounded-xl border border-purple-200'>
+                  <div className='text-center py-8 bg-gradient-to-br from-secondary/20 to-accent/20 rounded-xl border border-secondary/30'>
                     <div className='text-4xl mb-2'>💜</div>
-                    <p className='text-slate-700 mb-2'>No favorites from others yet</p>
-                    <p className='text-slate-600 text-sm'>Explore public dreams and add them to your favorites</p>
+                    <p className='text-base-content mb-2'>No favorites from others yet</p>
+                    <p className='text-base-content/70 text-sm'>Explore public dreams and add them to your favorites</p>
                   </div>
                 ) : (
                   <div className='space-y-3 max-h-64 overflow-y-auto'>
@@ -288,25 +288,25 @@ export default function FavoritesAndNotes() {
                         key={dream.id}
                         className={`p-4 rounded-lg border cursor-pointer transition-all hover:shadow-md ${
                           selectedDream?.id === dream.id 
-                            ? 'border-purple-300 bg-purple-50 shadow-md' 
-                            : 'border-slate-200 hover:border-slate-300'
+                            ? 'border-primary bg-primary/10 shadow-md' 
+                            : 'border-base-300 hover:border-base-400'
                         }`}
                         onClick={() => handleDreamSelect(dream)}
                       >
                         <div className='flex justify-between items-start mb-2'>
-                          <h4 className='font-semibold text-slate-800'>{dream.title}</h4>
-                          <span className='text-sm text-slate-500'>{formatDate(dream.date)}</span>
+                          <h4 className='font-semibold text-base-content'>{dream.title}</h4>
+                          <span className='text-sm text-base-content/60'>{formatDate(dream.date)}</span>
                         </div>
-                        <p className='text-sm text-slate-600 line-clamp-2 mb-2'>{dream.description}</p>
+                        <p className='text-sm text-base-content/70 line-clamp-2 mb-2'>{dream.description}</p>
                         <div className='flex justify-between items-center'>
                           <div className='flex flex-wrap gap-1'>
                             {dream.mood && (
-                              <span className='bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full'>
+                              <span className='bg-primary/20 text-primary text-xs px-2 py-1 rounded-full'>
                                 {dream.mood}
                               </span>
                             )}
                           </div>
-                          <div className='text-xs text-slate-500'>
+                          <div className='text-xs text-base-content/60'>
                             by {dream.user.firstName || dream.user.email}
                           </div>
                         </div>
@@ -318,35 +318,35 @@ export default function FavoritesAndNotes() {
             </div>
 
             {/* Right Side - Notes Editor */}
-            <div className='bg-white rounded-xl p-6 border border-slate-200 shadow-lg'>
+            <div className='bg-base-100 rounded-xl p-6 border border-base-300 shadow-lg'>
               <div className='flex justify-between items-center mb-4'>
-                <h3 className='text-xl font-semibold text-slate-800'>📝 Personal Notes</h3>
+                <h3 className='text-xl font-semibold text-base-content'>📝 Personal Notes</h3>
                 <div className='dropdown dropdown-end'>
-                  <div tabIndex={0} role='button' className='btn btn-sm btn-outline btn-warning hover:bg-yellow-100 transition-colors' title='Writing Prompts & Tips'>
+                  <div tabIndex={0} role='button' className='btn btn-sm btn-outline btn-primary' title='Writing Prompts & Tips'>
                     💡 Tips
                   </div>
-                  <div tabIndex={0} className='dropdown-content z-[1] menu p-4 shadow-lg bg-base-100 rounded-box w-80 border border-slate-200'>
-                    <h4 className='font-semibold mb-3 text-slate-800'>💡 Writing Prompts & Tips</h4>
+                  <div tabIndex={0} className='dropdown-content z-[1] menu p-4 shadow-lg bg-base-100 rounded-box w-80 border border-base-300'>
+                    <h4 className='font-semibold mb-3 text-base-content'>💡 Writing Prompts & Tips</h4>
                     <div className='space-y-3'>
                       <div>
-                        <h5 className='font-medium text-slate-700 text-sm mb-1'>Interpretation</h5>
-                        <ul className='text-xs text-slate-600 space-y-1'>
+                        <h5 className='font-medium text-base-content text-sm mb-1'>Interpretation</h5>
+                        <ul className='text-xs text-base-content/70 space-y-1'>
                           <li>• What do you think this dream means?</li>
                           <li>• How does it relate to your current life?</li>
                           <li>• What emotions did it bring up?</li>
                         </ul>
                       </div>
                       <div>
-                        <h5 className='font-medium text-slate-700 text-sm mb-1'>Reflection</h5>
-                        <ul className='text-xs text-slate-600 space-y-1'>
+                        <h5 className='font-medium text-base-content text-sm mb-1'>Reflection</h5>
+                        <ul className='text-xs text-base-content/70 space-y-1'>
                           <li>• What patterns do you notice?</li>
                           <li>• How has this dream affected you?</li>
                           <li>• What insights can you take from it?</li>
                         </ul>
                       </div>
                       <div>
-                        <h5 className='font-medium text-slate-700 text-sm mb-1'>Markdown Tips</h5>
-                        <ul className='text-xs text-slate-600 space-y-1'>
+                        <h5 className='font-medium text-base-content text-sm mb-1'>Markdown Tips</h5>
+                        <ul className='text-xs text-base-content/70 space-y-1'>
                           <li>• **Bold** for emphasis</li>
                           <li>• *Italic* for subtle emphasis</li>
                           <li>• ## Headers for organization</li>
@@ -361,22 +361,22 @@ export default function FavoritesAndNotes() {
               {selectedDream ? (
                 <div>
                   {/* Selected Dream Info */}
-                  <div className='mb-6 p-4 bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg border border-purple-200'>
-                    <h4 className='font-semibold text-slate-800 mb-2'>{selectedDream.title}</h4>
-                    <p className='text-sm text-slate-600 mb-3'>{selectedDream.description}</p>
+                  <div className='mb-6 p-4 bg-gradient-to-r from-primary/10 to-secondary/10 rounded-lg border border-primary/20'>
+                    <h4 className='font-semibold text-base-content mb-2'>{selectedDream.title}</h4>
+                    <p className='text-sm text-base-content/70 mb-3'>{selectedDream.description}</p>
                     <div className='flex flex-wrap gap-2 mb-2'>
                       {selectedDream.mood && (
-                        <span className='bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full'>
+                        <span className='bg-primary/20 text-primary text-xs px-2 py-1 rounded-full'>
                           {selectedDream.mood}
                         </span>
                       )}
                       {selectedDream.emotions?.slice(0, 3).map((emotion, index) => (
-                        <span key={index} className='bg-green-100 text-green-800 text-xs px-2 py-1 rounded-full'>
+                        <span key={index} className='bg-secondary/20 text-secondary text-xs px-2 py-1 rounded-full'>
                           {emotion}
                         </span>
                       ))}
                     </div>
-                    <div className='text-xs text-slate-500'>
+                    <div className='text-xs text-base-content/60'>
                       {formatDate(selectedDream.date)}
                       {selectedDream.user.auth0Id !== user?.sub && (
                         <span> • by {selectedDream.user.firstName || selectedDream.user.email}</span>
@@ -407,7 +407,7 @@ export default function FavoritesAndNotes() {
                           <span className='label-text font-medium'>Your Reflections</span>
                         </label>
                         <textarea
-                          className='textarea textarea-bordered w-full h-64 bg-white border-slate-300 focus:border-purple-500 focus:ring-2 focus:ring-purple-200 transition-all resize-none font-mono text-sm'
+                          className='textarea textarea-bordered w-full h-64 bg-base-100 border-base-300 focus:border-primary focus:ring-2 focus:ring-primary/20 transition-all resize-none font-mono text-sm'
                           placeholder='Write your thoughts, interpretations, or personal insights about this dream...
 
 # Use Markdown
@@ -423,7 +423,7 @@ What does this dream mean to you?'
                         />
                       </div>
                     ) : (
-                      <div className='border border-slate-300 rounded-lg p-4 h-64 overflow-y-auto bg-slate-50'>
+                      <div className='border border-base-300 rounded-lg p-4 h-64 overflow-y-auto bg-base-200'>
                         {noteContent ? (
                           <ReactMarkdown 
                             remarkPlugins={[remarkGfm]}
@@ -432,7 +432,7 @@ What does this dream mean to you?'
                             {noteContent}
                           </ReactMarkdown>
                         ) : (
-                          <p className='text-slate-500 italic'>No content to preview</p>
+                          <p className='text-base-content/60 italic'>No content to preview</p>
                         )}
                       </div>
                     )}
@@ -473,8 +473,8 @@ What does this dream mean to you?'
               ) : (
                 <div className='text-center py-12'>
                   <div className='text-6xl mb-4'>📝</div>
-                  <p className='text-lg text-slate-700 mb-2'>Select a dream to start writing</p>
-                  <p className='text-slate-500'>Choose a dream from your favorites to add your personal reflections and interpretations</p>
+                  <p className='text-lg text-base-content mb-2'>Select a dream to start writing</p>
+                  <p className='text-base-content/70'>Choose a dream from your favorites to add your personal reflections and interpretations</p>
                 </div>
               )}
             </div>
