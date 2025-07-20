@@ -2,101 +2,38 @@ import { useState, useEffect } from 'react'
 import { useAuth0 } from '@auth0/auth0-react'
 import Layout from '../../../components/Layout'
 import DreamCard from '../../../components/DreamCard'
-import useFavorites from '../../../hooks/useFavorites'
+import { useDatabaseFavorites } from '../../../hooks/useDatabaseFavorites'
 
 export default function Favorites() {
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
   const [activeTab, setActiveTab] = useState('my-favorites') // 'my-favorites', 'others-favorites'
   const [myFavorites, setMyFavorites] = useState([])
   const [othersFavorites, setOthersFavorites] = useState([])
-  const { user, getIdTokenClaims, isLoading: auth0Loading } = useAuth0()
-  const { getFavorites, removeFavorite } = useFavorites()
+  const { user, isLoading: auth0Loading } = useAuth0()
+  const { removeFavorite, favorites, error } = useDatabaseFavorites()
 
   useEffect(() => {
-    const fetchFavorites = async () => {
-      if (auth0Loading) return
+    if (!auth0Loading && favorites.length > 0) {
+      setLoading(true)
       
-      try {
-        setLoading(true)
-        const token = await getIdTokenClaims()
-        if (!token || !token.__raw) {
-          throw new Error('Token not available')
-        }
-        
-        // For now, we'll fetch all dreams and simulate favorites
-        // In a real app, you'd have a favorites table/relationship
-        const response = await fetch('http://localhost:4000/graphql', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token.__raw}`
-          },
-          body: JSON.stringify({
-            query: `
-              query {
-                allDreams {
-                  id
-                  title
-                  description
-                  date
-                  image
-                  isPublic
-                  tags
-                  mood
-                  emotions
-                  colors
-                  user {
-                    id
-                    email
-                    firstName
-                    lastName
-                    picture
-                  }
-                }
-              }
-            `
-          })
-        })
-
-        const data = await response.json()
-        
-        if (data.errors) {
-          throw new Error(data.errors[0].message)
-        }
-
-        // Get user's actual favorites from the hook
-        const userFavorites = getFavorites()
-        const allDreams = data.data.allDreams
-        
-        // Filter dreams that are actually favorited by the user
-        const favoritedDreams = allDreams.filter(dream => userFavorites.has(dream.id))
-        
-        // Separate user's own dreams from others' dreams
-        const myDreams = favoritedDreams.filter(dream => dream.user.id === user.sub)
-        const othersDreams = favoritedDreams.filter(dream => dream.user.id !== user.sub)
-        
-        setMyFavorites(myDreams)
-        setOthersFavorites(othersDreams)
-      } catch (err) {
-        console.error('Error fetching favorites:', err)
-        setError(err.message)
-      } finally {
-        setLoading(false)
-      }
+      // Separate user's own dreams from others' dreams
+      const myDreams = favorites.filter(favorite => favorite.dream.user.id === user.sub)
+      const othersDreams = favorites.filter(favorite => favorite.dream.user.id !== user.sub)
+      
+      setMyFavorites(myDreams.map(f => f.dream))
+      setOthersFavorites(othersDreams.map(f => f.dream))
+      setLoading(false)
+    } else if (!auth0Loading) {
+      setMyFavorites([])
+      setOthersFavorites([])
+      setLoading(false)
     }
-
-    if (!auth0Loading) {
-      fetchFavorites()
-    }
-  }, [getIdTokenClaims, auth0Loading])
+  }, [favorites, auth0Loading, user?.sub])
 
   const handleRemoveFavorite = (dreamId) => {
     // Remove from favorites using the hook
     removeFavorite(dreamId)
-    // Update local state
-    setMyFavorites(prev => prev.filter(dream => dream.id !== dreamId))
-    setOthersFavorites(prev => prev.filter(dream => dream.id !== dreamId))
+    // Local state will be updated automatically via the useEffect
   }
 
   if (loading) {

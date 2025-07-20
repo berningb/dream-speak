@@ -3,7 +3,7 @@ import { useAuth0 } from '@auth0/auth0-react'
 import Layout from '../../components/Layout'
 import DreamCard from '../../components/DreamCard'
 import Comments from '../../components/Comments'
-import useFavorites from '../../hooks/useFavorites'
+import { useDatabaseFavorites } from '../../hooks/useDatabaseFavorites'
 
 export default function Explore() {
   const [dreams, setDreams] = useState([])
@@ -16,7 +16,7 @@ export default function Explore() {
   const [commentsOpen, setCommentsOpen] = useState(false)
   const [selectedDreamId, setSelectedDreamId] = useState(null)
   const { getIdTokenClaims, isLoading: auth0Loading } = useAuth0()
-  const { isFavorited, toggleFavorite } = useFavorites()
+  const { isFavorited, toggleFavorite } = useDatabaseFavorites()
 
   // Get unique moods and tags from dreams
   const moods = [...new Set(dreams.map(dream => dream.mood).filter(Boolean))]
