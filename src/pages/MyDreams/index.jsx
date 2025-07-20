@@ -4,14 +4,18 @@ import Layout from '../../components/Layout'
 import useDreams from '../../hooks/useDreams'
 import AddDreamModal from '../../components/AddDreamModal'
 import DreamCard from '../../components/DreamCard'
+import useFavorites from '../../hooks/useFavorites'
 
-const DreamItem = ({ dream }) => {
+const DreamItem = ({ dream, isFavorited, onFavoriteToggle }) => {
   const navigate = useNavigate()
 
   return (
     <DreamCard 
       dream={dream} 
       showAuthor={false}
+      showFavoriteButton={true}
+      isFavorited={isFavorited}
+      onFavoriteToggle={onFavoriteToggle}
       onClick={() => navigate(`/dream/${dream.id}`)}
     />
   )
@@ -19,6 +23,7 @@ const DreamItem = ({ dream }) => {
 
 export default function MyDreams () {
   const { dreams, loading, error, fetchDreams } = useDreams()
+  const { isFavorited, toggleFavorite } = useFavorites()
 
   if (loading) return <div>Loading...</div>
   if (error) return <div>Error: {error}</div>
@@ -61,7 +66,12 @@ export default function MyDreams () {
           ) : (
             <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
               {dreams.map(dream => (
-                <DreamItem key={dream.id} dream={dream} />
+                <DreamItem 
+                  key={dream.id} 
+                  dream={dream} 
+                  isFavorited={isFavorited(dream.id)}
+                  onFavoriteToggle={toggleFavorite}
+                />
               ))}
             </div>
           )}
