@@ -26,6 +26,7 @@ const GET_USER_FAVORITES = `
         colors
         user {
           id
+          auth0Id
           email
           firstName
           lastName

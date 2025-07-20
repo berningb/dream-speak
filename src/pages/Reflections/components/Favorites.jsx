@@ -16,9 +16,22 @@ export default function Favorites() {
     if (!auth0Loading && favorites.length > 0) {
       setLoading(true)
       
+      console.log('🔍 Debug favorites filtering:')
+      console.log('🔍 user.sub (Auth0 ID):', user.sub)
+      console.log('🔍 favorites:', favorites)
+      
       // Separate user's own dreams from others' dreams
-      const myDreams = favorites.filter(favorite => favorite.dream.user.id === user.sub)
-      const othersDreams = favorites.filter(favorite => favorite.dream.user.id !== user.sub)
+      // We need to compare the dream's user auth0Id with the current user's sub
+      const myDreams = favorites.filter(favorite => {
+        console.log('🔍 Checking dream:', favorite.dream.title)
+        console.log('🔍 Dream user auth0Id:', favorite.dream.user.auth0Id)
+        console.log('🔍 Current user sub:', user.sub)
+        return favorite.dream.user.auth0Id === user.sub
+      })
+      const othersDreams = favorites.filter(favorite => favorite.dream.user.auth0Id !== user.sub)
+      
+      console.log('🔍 My dreams:', myDreams.length)
+      console.log('🔍 Others dreams:', othersDreams.length)
       
       setMyFavorites(myDreams.map(f => f.dream))
       setOthersFavorites(othersDreams.map(f => f.dream))
