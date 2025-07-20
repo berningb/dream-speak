@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useAuth0 } from '@auth0/auth0-react'
+import { useBackendUser } from '../hooks/useUsers.jsx'
 
 export default function Comments({ dreamId, isOpen, onClose }) {
   const [comments, setComments] = useState([])
@@ -8,6 +9,8 @@ export default function Comments({ dreamId, isOpen, onClose }) {
   const [replyText, setReplyText] = useState('')
   const [loading, setLoading] = useState(false)
   const { user } = useAuth0()
+  const { backendUser } = useBackendUser()
+  // TODO: Replace with backend user fetch if needed
 
   // Mock comments data - in a real app, this would come from the API
   const mockComments = [
@@ -74,9 +77,9 @@ export default function Comments({ dreamId, isOpen, onClose }) {
         text: newComment,
         author: {
           id: user.sub,
-          firstName: user.given_name || user.name?.split(' ')[0] || 'User',
-          lastName: user.family_name || user.name?.split(' ').slice(1).join(' ') || '',
-          picture: user.picture
+          firstName: backendUser?.firstName || '',
+          lastName: backendUser?.lastName || '',
+          picture: backendUser?.picture || '/default-avatar.png'
         },
         createdAt: new Date(),
         likes: 0,
@@ -105,9 +108,9 @@ export default function Comments({ dreamId, isOpen, onClose }) {
         text: replyText,
         author: {
           id: user.sub,
-          firstName: user.given_name || user.name?.split(' ')[0] || 'User',
-          lastName: user.family_name || user.name?.split(' ').slice(1).join(' ') || '',
-          picture: user.picture
+          firstName: backendUser?.firstName || '',
+          lastName: backendUser?.lastName || '',
+          picture: backendUser?.picture || '/default-avatar.png'
         },
         createdAt: new Date(),
         likes: 0,

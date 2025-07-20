@@ -4,7 +4,7 @@ import Layout from '../../components/Layout'
 import useDreams from '../../hooks/useDreams'
 import AddDreamModal from '../../components/AddDreamModal'
 import DreamCard from '../../components/DreamCard'
-import useDatabaseFavorites from '../../hooks/useDatabaseFavorites'
+import useFavorites from '../../hooks/useFavorites'
 
 const DreamItem = ({ dream, isFavorited, onFavoriteToggle }) => {
   const navigate = useNavigate()
@@ -23,7 +23,7 @@ const DreamItem = ({ dream, isFavorited, onFavoriteToggle }) => {
 
 export default function MyDreams () {
   const { dreams, loading, error, fetchDreams } = useDreams()
-  const { isFavorited, toggleFavorite } = useDatabaseFavorites()
+  const { isFavorited, toggleFavorite } = useFavorites()
 
   if (loading) return <div>Loading...</div>
   if (error) return <div>Error: {error}</div>

@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react'
 import { useAuth0 } from '@auth0/auth0-react'
+import { useBackendUser } from '../../hooks/useUsers.jsx'
 import Layout from '../../components/Layout'
 import { formatFullDate, getApiUrl } from '../../utils'
+import useApi from '../../hooks/useApi';
 
 export default function Settings() {
-  const [user, setUser] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const { getIdTokenClaims } = useAuth0()
+  const { backendUser, loading, error, refreshBackendUser } = useBackendUser()
+  const [mutationError, setMutationError] = useState(null);
   const [isEditing, setIsEditing] = useState(false)
   const [editForm, setEditForm] = useState({
     firstName: '',
@@ -14,68 +16,33 @@ export default function Settings() {
     picture: ''
   })
   const [saveLoading, setSaveLoading] = useState(false)
-  const { getIdTokenClaims, user: auth0User } = useAuth0()
+  const { apiCall } = useApi();
+  const [dreamCount, setDreamCount] = useState(0);
+  const [publicDreamCount, setPublicDreamCount] = useState(0);
+  const [privateDreamCount, setPrivateDreamCount] = useState(0);
+
+  // Sync editForm with backendUser when loaded
+  useEffect(() => {
+    if (backendUser) {
+      setEditForm({
+        firstName: backendUser.firstName || '',
+        lastName: backendUser.lastName || '',
+        picture: backendUser.picture || ''
+      })
+    }
+  }, [backendUser])
 
   useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        setLoading(true)
-        const token = await getIdTokenClaims()
-        
-        const response = await fetch(getApiUrl(), {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token.__raw}`
-          },
-          body: JSON.stringify({
-            query: `
-              query {
-                dreams {
-                  id
-                  title
-                  isPublic
-                }
-              }
-            `
-          })
-        })
-
-        const data = await response.json()
-        
-        if (data.errors) {
-          throw new Error(data.errors[0].message)
-        }
-
-        // Get user info from Auth0 and combine with dream data
-        const userInfo = {
-          id: auth0User?.sub,
-          email: auth0User?.email,
-          firstName: auth0User?.given_name || '',
-          lastName: auth0User?.family_name || '',
-          picture: auth0User?.picture || '',
-          createdAt: auth0User?.updated_at,
-          dreams: data.data.dreams || []
-        }
-        
-        setUser(userInfo)
-        setEditForm({
-          firstName: userInfo.firstName,
-          lastName: userInfo.lastName,
-          picture: userInfo.picture
-        })
-      } catch (err) {
-        console.error('Error fetching user:', err)
-        setError(err.message)
-      } finally {
-        setLoading(false)
+    async function fetchDreams() {
+      const data = await apiCall(`query { dreams { id isPublic } }`);
+      if (data && data.dreams) {
+        setDreamCount(data.dreams.length);
+        setPublicDreamCount(data.dreams.filter(d => d.isPublic).length);
+        setPrivateDreamCount(data.dreams.filter(d => !d.isPublic).length);
       }
     }
-
-    if (auth0User) {
-      fetchUser()
-    }
-  }, [getIdTokenClaims, auth0User])
+    fetchDreams();
+  }, [apiCall]);
 
   const handleSave = async () => {
     try {
@@ -110,11 +77,12 @@ export default function Settings() {
         throw new Error(data.errors[0].message)
       }
 
-      setUser(prev => ({ ...prev, ...data.data.updateUser }))
+      // Refetch backend user after update
+      await refreshBackendUser()
       setIsEditing(false)
     } catch (err) {
       console.error('Error updating user:', err)
-      setError(err.message)
+      setMutationError(err.message)
     } finally {
       setSaveLoading(false)
     }
@@ -122,9 +90,9 @@ export default function Settings() {
 
   const handleCancel = () => {
     setEditForm({
-      firstName: user?.firstName || '',
-      lastName: user?.lastName || '',
-      picture: user?.picture || ''
+      firstName: backendUser?.firstName || '',
+      lastName: backendUser?.lastName || '',
+      picture: backendUser?.picture || ''
     })
     setIsEditing(false)
   }
@@ -150,7 +118,7 @@ export default function Settings() {
               deleteUser(auth0Id: $auth0Id)
             }
           `,
-          variables: { auth0Id: user?.id }
+          variables: { auth0Id: backendUser?.id }
         })
       })
 
@@ -164,7 +132,7 @@ export default function Settings() {
       window.location.href = '/'
     } catch (err) {
       console.error('Error deleting user:', err)
-      setError(err.message)
+      setMutationError(err.message)
     } finally {
       setSaveLoading(false)
     }
@@ -205,7 +173,6 @@ export default function Settings() {
       <div className='flex flex-col items-center justify-start h-screen'>
         <h1 className='text-4xl font-bold text-center py-6'>Profile & Settings</h1>
         <div className='max-w-4xl mx-auto px-4 w-full'>
-          
           {/* Profile Section */}
           <div className='bg-base-200 rounded-lg p-6 mb-6'>
             <div className='flex justify-between items-center mb-6'>
@@ -219,10 +186,21 @@ export default function Settings() {
                 </button>
               )}
             </div>
-
             {isEditing ? (
               <div className='space-y-4'>
                 <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                  <div>
+                    <label className='label'>
+                      <span className='label-text'>Email (read-only)</span>
+                    </label>
+                    <input
+                      type='email'
+                      className='input input-bordered w-full bg-gray-100 cursor-not-allowed'
+                      value={backendUser?.email || ''}
+                      readOnly
+                      tabIndex={-1}
+                    />
+                  </div>
                   <div>
                     <label className='label'>
                       <span className='label-text'>First Name</span>
@@ -280,38 +258,34 @@ export default function Settings() {
                 <div className='flex items-center space-x-4'>
                   <div className='avatar'>
                     <div className='w-16 h-16 rounded-full'>
-                      <img src={user?.picture || '/default-avatar.png'} alt='Profile' />
+                      <img src={backendUser?.picture || '/default-avatar.png'} alt='Profile' />
                     </div>
                   </div>
                   <div>
                     <h3 className='text-lg font-semibold'>
-                      {user?.firstName && user?.lastName 
-                        ? `${user.firstName} ${user.lastName}`
-                        : user?.email
+                      {backendUser?.firstName || backendUser?.lastName 
+                        ? `${backendUser?.firstName || ''} ${backendUser?.lastName || ''}`.trim()
+                        : backendUser?.email
                       }
                     </h3>
-                    <p className='text-base-content/70'>{user?.email}</p>
+                    <p className='text-base-content/70'>{backendUser?.email}</p>
                     <p className='text-sm text-base-content/50'>
-                      Member since {user?.createdAt ? formatFullDate(user.createdAt) : 'Unknown'}
+                      Member since {backendUser?.createdAt ? formatFullDate(backendUser.createdAt) : 'Unknown'}
                     </p>
                   </div>
                 </div>
                 <div className='space-y-2'>
                   <div className='flex justify-between'>
                     <span className='text-base-content/70'>Total Dreams:</span>
-                    <span className='font-semibold'>{user?.dreams?.length || 0}</span>
+                    <span className='font-semibold'>{dreamCount}</span>
                   </div>
                   <div className='flex justify-between'>
                     <span className='text-base-content/70'>Public Dreams:</span>
-                    <span className='font-semibold'>
-                      {user?.dreams?.filter(dream => dream.isPublic).length || 0}
-                    </span>
+                    <span className='font-semibold'>{publicDreamCount}</span>
                   </div>
                   <div className='flex justify-between'>
                     <span className='text-base-content/70'>Private Dreams:</span>
-                    <span className='font-semibold'>
-                      {user?.dreams?.filter(dream => !dream.isPublic).length || 0}
-                    </span>
+                    <span className='font-semibold'>{privateDreamCount}</span>
                   </div>
                 </div>
               </div>
@@ -358,6 +332,12 @@ export default function Settings() {
               </button>
             </div>
           </div>
+          {/* Show mutation error if present */}
+          {mutationError && (
+            <div className='alert alert-error mb-4'>
+              <span>{mutationError}</span>
+            </div>
+          )}
         </div>
       </div>
     </Layout>

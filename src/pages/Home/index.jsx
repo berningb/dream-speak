@@ -56,13 +56,24 @@ export default function Home() {
         <div className='max-w-4xl mx-auto px-4 w-full'>
           <div className='bg-base-200 rounded-lg p-6 mb-6'>
             <h2 className='text-2xl font-semibold mb-4'>Quick Actions</h2>
-            <div className='flex justify-center'>
-              <button 
+            <div className='flex justify-center gap-4 flex-wrap'>
+             
+              {isAuthenticated ? (
+                <>
+                  <button className='btn btn-secondary btn-lg' onClick={() => navigate('/log')}>Log a Dream</button>
+                  <button className='btn btn-info btn-lg' onClick={() => navigate('/my-dreams')}>My Dreams</button>
+                  <button className='btn btn-accent btn-lg' onClick={() => navigate('/reflections')}>Reflections</button>
+                </>
+              ) : (
+                <>
+                 <button 
                 className='btn btn-primary btn-lg'
                 onClick={() => navigate('/explore')}
               >
                 Explore Dreams
               </button>
+                </>
+              )}
             </div>
           </div>
           

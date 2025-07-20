@@ -20,7 +20,7 @@ export default function Analytics() {
           throw new Error('Token not available')
         }
         
-        const response = await fetch('http://localhost:4000/graphql', {
+        const response = await fetch('https://localhost:4000/graphql', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -29,7 +29,7 @@ export default function Analytics() {
           body: JSON.stringify({
             query: `
               query {
-                allDreams {
+                dreams {
                   id
                   title
                   description
@@ -53,7 +53,8 @@ export default function Analytics() {
           throw new Error(data.errors[0].message)
         }
 
-        setDreams(data.data.allDreams)
+        setDreams(data.data.dreams)
+        console.log('[Analytics] dreams fetched:', data.data.dreams)
       } catch (err) {
         console.error('Error fetching dreams:', err)
         setError(err.message)

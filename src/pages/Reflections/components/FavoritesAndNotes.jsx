@@ -4,33 +4,36 @@ import { useNavigate } from 'react-router-dom'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import Layout from '../../../components/Layout'
-import useDatabaseFavorites from '../../../hooks/useDatabaseFavorites'
+import useFavorites from '../../../hooks/useFavorites'
 
 const SAVE_NOTE_MUTATION = `
-  mutation SaveNote($dreamId: ID!, $content: String!) {
-    saveNote(dreamId: $dreamId, content: $content) {
+  mutation SaveNote($favoriteId: ID!, $content: String!) {
+    saveNote(favoriteId: $favoriteId, content: $content) {
       id
       content
       createdAt
       updatedAt
-      dream {
+      favorite {
         id
-        title
-        description
-        date
-        image
-        isPublic
-        tags
-        mood
-        emotions
-        colors
-        user {
+        dream {
           id
-          auth0Id
-          email
-          firstName
-          lastName
-          picture
+          title
+          description
+          date
+          image
+          isPublic
+          tags
+          mood
+          emotions
+          colors
+          user {
+            id
+            auth0Id
+            email
+            firstName
+            lastName
+            picture
+          }
         }
       }
     }
@@ -38,30 +41,33 @@ const SAVE_NOTE_MUTATION = `
 `
 
 const GET_NOTE_QUERY = `
-  query GetNote($dreamId: ID!) {
-    note(dreamId: $dreamId) {
+  query GetNote($favoriteId: ID!) {
+    note(favoriteId: $favoriteId) {
       id
       content
       createdAt
       updatedAt
-      dream {
+      favorite {
         id
-        title
-        description
-        date
-        image
-        isPublic
-        tags
-        mood
-        emotions
-        colors
-        user {
+        dream {
           id
-          auth0Id
-          email
-          firstName
-          lastName
-          picture
+          title
+          description
+          date
+          image
+          isPublic
+          tags
+          mood
+          emotions
+          colors
+          user {
+            id
+            auth0Id
+            email
+            firstName
+            lastName
+            picture
+          }
         }
       }
     }
@@ -70,31 +76,31 @@ const GET_NOTE_QUERY = `
 
 export default function FavoritesAndNotes() {
   const navigate = useNavigate()
-  const [selectedDream, setSelectedDream] = useState(null)
+  const [selectedFavorite, setSelectedFavorite] = useState(null)
   const [noteContent, setNoteContent] = useState('')
   const [currentNote, setCurrentNote] = useState(null)
   const [saving, setSaving] = useState(false)
   const [previewMode, setPreviewMode] = useState(false)
   const { user, getIdTokenClaims } = useAuth0()
-  const { favorites, loading: favoritesLoading, error: favoritesError, removeFavorite } = useDatabaseFavorites()
+  const { favorites, loading: favoritesLoading, error: favoritesError, removeFavorite } = useFavorites()
 
   // Separate user's own dreams from others' dreams
-  const myFavorites = favorites.filter(favorite => favorite.dream.user.auth0Id === user?.sub).map(f => f.dream)
-  const othersFavorites = favorites.filter(favorite => favorite.dream.user.auth0Id !== user?.sub).map(f => f.dream)
+  const myFavorites = favorites.filter(favorite => favorite.dream.user.auth0Id === user?.sub)
+  const othersFavorites = favorites.filter(favorite => favorite.dream.user.auth0Id !== user?.sub)
 
-  const handleDreamSelect = async (dream) => {
-    setSelectedDream(dream)
+  const handleFavoriteSelect = async (favorite) => {
+    setSelectedFavorite(favorite)
     setNoteContent('')
     setCurrentNote(null)
     
-    // Load existing note for this dream
+    // Load existing note for this favorite
     try {
       const tokenClaims = await getIdTokenClaims()
       if (!tokenClaims || !tokenClaims.__raw) {
         throw new Error('Token not available')
       }
 
-      const response = await fetch('http://localhost:4000/graphql', {
+      const response = await fetch('https://localhost:4000/graphql', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -102,7 +108,7 @@ export default function FavoritesAndNotes() {
         },
         body: JSON.stringify({
           query: GET_NOTE_QUERY,
-          variables: { dreamId: dream.id }
+          variables: { favoriteId: favorite.id }
         })
       })
 
@@ -119,7 +125,7 @@ export default function FavoritesAndNotes() {
   }
 
   const handleSaveNote = async () => {
-    if (!selectedDream || !noteContent.trim()) return
+    if (!selectedFavorite || !noteContent.trim()) return
     
     setSaving(true)
     try {
@@ -128,7 +134,7 @@ export default function FavoritesAndNotes() {
         throw new Error('Token not available')
       }
 
-      const response = await fetch('http://localhost:4000/graphql', {
+      const response = await fetch('https://localhost:4000/graphql', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -137,7 +143,7 @@ export default function FavoritesAndNotes() {
         body: JSON.stringify({
           query: SAVE_NOTE_MUTATION,
           variables: { 
-            dreamId: selectedDream.id, 
+            favoriteId: selectedFavorite.id, 
             content: noteContent 
           }
         })
@@ -158,8 +164,8 @@ export default function FavoritesAndNotes() {
 
   const handleRemoveFavorite = (dreamId) => {
     removeFavorite(dreamId)
-    if (selectedDream?.id === dreamId) {
-      setSelectedDream(null)
+    if (selectedFavorite?.dream.id === dreamId) {
+      setSelectedFavorite(null)
       setNoteContent('')
       setCurrentNote(null)
     }
@@ -252,26 +258,26 @@ export default function FavoritesAndNotes() {
                   </div>
                 ) : (
                   <div className='space-y-3 max-h-64 overflow-y-auto'>
-                    {myFavorites.map((dream) => (
+                    {myFavorites.map((favorite) => (
                       <div 
-                        key={dream.id}
+                        key={favorite.id}
                         className={`p-4 rounded-lg border cursor-pointer transition-all hover:shadow-md ${
-                          selectedDream?.id === dream.id 
+                          selectedFavorite?.id === favorite.id 
                             ? 'border-primary bg-primary/10 shadow-md' 
                             : 'border-base-300 hover:border-base-400'
                         }`}
-                        onClick={() => handleDreamSelect(dream)}
+                        onClick={() => handleFavoriteSelect(favorite)}
                       >
                         <div className='flex justify-between items-start mb-2'>
-                          <h4 className='font-semibold text-base-content'>{dream.title}</h4>
-                          <span className='text-sm text-base-content/60'>{formatDate(dream.date)}</span>
+                          <h4 className='font-semibold text-base-content'>{favorite.dream.title}</h4>
+                          <span className='text-sm text-base-content/60'>{formatDate(favorite.dream.date)}</span>
                         </div>
-                        <p className='text-sm text-base-content/70 line-clamp-2 mb-2'>{dream.description}</p>
+                        <p className='text-sm text-base-content/70 line-clamp-2 mb-2'>{favorite.dream.description}</p>
                         <div className='flex justify-between items-center'>
                           <div className='flex flex-wrap gap-1'>
-                            {dream.mood && (
+                            {favorite.dream.mood && (
                               <span className='bg-primary/20 text-primary text-xs px-2 py-1 rounded-full'>
-                                {dream.mood}
+                                {favorite.dream.mood}
                               </span>
                             )}
                           </div>
@@ -279,7 +285,7 @@ export default function FavoritesAndNotes() {
                             className='btn btn-sm btn-circle btn-error opacity-0 group-hover:opacity-100 transition-opacity'
                             onClick={(e) => {
                               e.stopPropagation()
-                              handleRemoveFavorite(dream.id)
+                              handleRemoveFavorite(favorite.dream.id)
                             }}
                             title='Remove from favorites'
                           >
@@ -309,31 +315,31 @@ export default function FavoritesAndNotes() {
                   </div>
                 ) : (
                   <div className='space-y-3 max-h-64 overflow-y-auto'>
-                    {othersFavorites.map((dream) => (
+                    {othersFavorites.map((favorite) => (
                       <div 
-                        key={dream.id}
+                        key={favorite.id}
                         className={`p-4 rounded-lg border cursor-pointer transition-all hover:shadow-md ${
-                          selectedDream?.id === dream.id 
+                          selectedFavorite?.id === favorite.id 
                             ? 'border-primary bg-primary/10 shadow-md' 
                             : 'border-base-300 hover:border-base-400'
                         }`}
-                        onClick={() => handleDreamSelect(dream)}
+                        onClick={() => handleFavoriteSelect(favorite)}
                       >
                         <div className='flex justify-between items-start mb-2'>
-                          <h4 className='font-semibold text-base-content'>{dream.title}</h4>
-                          <span className='text-sm text-base-content/60'>{formatDate(dream.date)}</span>
+                          <h4 className='font-semibold text-base-content'>{favorite.dream.title}</h4>
+                          <span className='text-sm text-base-content/60'>{formatDate(favorite.dream.date)}</span>
                         </div>
-                        <p className='text-sm text-base-content/70 line-clamp-2 mb-2'>{dream.description}</p>
+                        <p className='text-sm text-base-content/70 line-clamp-2 mb-2'>{favorite.dream.description}</p>
                         <div className='flex justify-between items-center'>
                           <div className='flex flex-wrap gap-1'>
-                            {dream.mood && (
+                            {favorite.dream.mood && (
                               <span className='bg-primary/20 text-primary text-xs px-2 py-1 rounded-full'>
-                                {dream.mood}
+                                {favorite.dream.mood}
                               </span>
                             )}
                           </div>
                           <div className='text-xs text-base-content/60'>
-                            by {dream.user.firstName || dream.user.email}
+                            by {favorite.dream.user.firstName || favorite.dream.user.email}
                           </div>
                         </div>
                       </div>
@@ -411,28 +417,28 @@ export default function FavoritesAndNotes() {
                 </div>
               </div>
               
-              {selectedDream ? (
+              {selectedFavorite ? (
                 <div>
                   {/* Selected Dream Info */}
                   <div className='mb-6 p-4 bg-gradient-to-r from-primary/10 to-secondary/10 rounded-lg border border-primary/20'>
-                    <h4 className='font-semibold text-base-content mb-2'>{selectedDream.title}</h4>
-                    <p className='text-sm text-base-content/70 mb-3'>{selectedDream.description}</p>
+                    <h4 className='font-semibold text-base-content mb-2'>{selectedFavorite.dream.title}</h4>
+                    <p className='text-sm text-base-content/70 mb-3'>{selectedFavorite.dream.description}</p>
                     <div className='flex flex-wrap gap-2 mb-2'>
-                      {selectedDream.mood && (
+                      {selectedFavorite.dream.mood && (
                         <span className='bg-primary/20 text-primary text-xs px-2 py-1 rounded-full'>
-                          {selectedDream.mood}
+                          {selectedFavorite.dream.mood}
                         </span>
                       )}
-                      {selectedDream.emotions?.slice(0, 3).map((emotion, index) => (
+                      {selectedFavorite.dream.emotions?.slice(0, 3).map((emotion, index) => (
                         <span key={index} className='bg-secondary/20 text-secondary text-xs px-2 py-1 rounded-full'>
                           {emotion}
                         </span>
                       ))}
                     </div>
                     <div className='text-xs text-base-content/60'>
-                      {formatDate(selectedDream.date)}
-                      {selectedDream.user.auth0Id !== user?.sub && (
-                        <span> • by {selectedDream.user.firstName || selectedDream.user.email}</span>
+                      {formatDate(selectedFavorite.dream.date)}
+                      {selectedFavorite.dream.user.auth0Id !== user?.sub && (
+                        <span> • by {selectedFavorite.dream.user.firstName || selectedFavorite.dream.user.email}</span>
                       )}
                     </div>
                   </div>

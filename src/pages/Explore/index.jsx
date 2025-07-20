@@ -3,7 +3,7 @@ import { useAuth0 } from '@auth0/auth0-react'
 import Layout from '../../components/Layout'
 import DreamCard from '../../components/DreamCard'
 import Comments from '../../components/Comments'
-import useDatabaseFavorites from '../../hooks/useDatabaseFavorites'
+import useFavorites from '../../hooks/useFavorites'
 import { getApiUrl } from '../../utils'
 
 export default function Explore() {
@@ -17,7 +17,9 @@ export default function Explore() {
   const [commentsOpen, setCommentsOpen] = useState(false)
   const [selectedDreamId, setSelectedDreamId] = useState(null)
   const { getIdTokenClaims, isAuthenticated, loginWithRedirect } = useAuth0()
-  const { isFavorited, toggleFavorite } = useDatabaseFavorites()
+  const favoritesHook = useFavorites()
+  const isFavorited = isAuthenticated ? favoritesHook.isFavorited : () => false
+  const toggleFavorite = isAuthenticated ? favoritesHook.toggleFavorite : () => {}
 
 
 

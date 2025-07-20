@@ -10,10 +10,7 @@ export const initializeTheme = () => {
 export const formatDreamDate = (dateString) => {
   if (!dateString) return 'No date'
   
-  console.log('🔍 formatDreamDate input:', dateString, typeof dateString)
-  
   const momentDate = moment(dateString)
-  console.log('🔍 moment result:', momentDate.format(), 'valid:', momentDate.isValid())
   
   if (!momentDate.isValid()) {
     return 'Invalid date'
@@ -83,7 +80,8 @@ export const themes = [
 
 // Function to get the dynamic API URL based on current protocol and hostname
 export const getApiUrl = () => {
-  const apiProtocol = window.location.protocol === 'https:' ? 'https:' : 'http:'
-  const apiHost = window.location.hostname === '192.168.0.65' ? '192.168.0.65' : 'localhost'
-  return `${apiProtocol}//${apiHost}:4000/graphql`
+  // Use the same hostname as the current page, but port 4000 for the backend
+  const hostname = window.location.hostname
+  const protocol = window.location.protocol
+  return `${protocol}//${hostname}:4000/graphql`
 }

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useAuth0 } from '@auth0/auth0-react'
 import Layout from '../../../components/Layout'
 import DreamCard from '../../../components/DreamCard'
-import useDatabaseFavorites from '../../../hooks/useDatabaseFavorites'
+import useFavorites from '../../../hooks/useFavorites'
 
 export default function Favorites() {
   const [loading, setLoading] = useState(true)
@@ -10,7 +10,7 @@ export default function Favorites() {
   const [myFavorites, setMyFavorites] = useState([])
   const [othersFavorites, setOthersFavorites] = useState([])
   const { user, isLoading: auth0Loading } = useAuth0()
-  const { removeFavorite, favorites, error } = useDatabaseFavorites()
+  const { removeFavorite, favorites, error } = useFavorites()
 
   useEffect(() => {
     if (!auth0Loading && favorites.length > 0) {

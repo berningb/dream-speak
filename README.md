@@ -33,14 +33,24 @@ DreamSpeak is a web application built with React and Vite, designed to help user
    VITE_CLIENT_DOMAIN=dev-wrmepf3pb43nrndk.us.auth0.com
    VITE_CLIENT_ID=OwOconAGdjngYK6TgUg3nkZUPETGoTD0
    VITE_AUDIENCE=https://dev-wrmepf3pb43nrndk.us.auth0.com/api/v2/
+
+   **Test Credentials:**
+   - Email: `test@test.com`
+   - Password: `Test123!`
    ```
 
    **Auth0 Dashboard**: https://dev-wrmepf3pb43nrndk.us.auth0.com
 
-4. Start the development server:
+4. Start the development servers:
+
    ```sh
-   npm run dev
+   bash start-dev.sh
    ```
+
+   **Note**: Both frontend and backend run on HTTPS with self-signed certificates. You'll need to accept the certificate warnings in your browser for both:
+
+   - Frontend: `https://localhost:3000`
+   - Backend: `https://localhost:4000`
 
 ## Project Structure
 

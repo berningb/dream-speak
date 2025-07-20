@@ -16,7 +16,7 @@ export default function Notes() {
         setLoading(true)
         const token = await getIdTokenClaims()
         
-        const response = await fetch('http://localhost:4000/graphql', {
+        const response = await fetch('https://localhost:4000/graphql', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
