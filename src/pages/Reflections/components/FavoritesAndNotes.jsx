@@ -1,9 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useAuth0 } from '@auth0/auth0-react'
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
 import Layout from '../../../components/Layout'
-import DreamCard from '../../../components/DreamCard'
 import useDatabaseFavorites from '../../../hooks/useDatabaseFavorites'
 
 const SAVE_NOTE_MUTATION = `
@@ -74,7 +73,7 @@ export default function FavoritesAndNotes() {
   const [currentNote, setCurrentNote] = useState(null)
   const [saving, setSaving] = useState(false)
   const [previewMode, setPreviewMode] = useState(false)
-  const { user, getIdTokenClaims, isLoading: auth0Loading } = useAuth0()
+  const { user, getIdTokenClaims } = useAuth0()
   const { favorites, loading: favoritesLoading, error: favoritesError, removeFavorite } = useDatabaseFavorites()
 
   // Separate user's own dreams from others' dreams
@@ -320,7 +319,44 @@ export default function FavoritesAndNotes() {
 
             {/* Right Side - Notes Editor */}
             <div className='bg-white rounded-xl p-6 border border-slate-200 shadow-lg'>
-              <h3 className='text-xl font-semibold mb-4 text-slate-800'>📝 Personal Notes</h3>
+              <div className='flex justify-between items-center mb-4'>
+                <h3 className='text-xl font-semibold text-slate-800'>📝 Personal Notes</h3>
+                <div className='dropdown dropdown-end'>
+                  <div tabIndex={0} role='button' className='btn btn-sm btn-circle btn-ghost'>
+                    💡
+                  </div>
+                  <div tabIndex={0} className='dropdown-content z-[1] menu p-4 shadow bg-base-100 rounded-box w-80'>
+                    <h4 className='font-semibold mb-3 text-slate-800'>💡 Writing Prompts & Tips</h4>
+                    <div className='space-y-3'>
+                      <div>
+                        <h5 className='font-medium text-slate-700 text-sm mb-1'>Interpretation</h5>
+                        <ul className='text-xs text-slate-600 space-y-1'>
+                          <li>• What do you think this dream means?</li>
+                          <li>• How does it relate to your current life?</li>
+                          <li>• What emotions did it bring up?</li>
+                        </ul>
+                      </div>
+                      <div>
+                        <h5 className='font-medium text-slate-700 text-sm mb-1'>Reflection</h5>
+                        <ul className='text-xs text-slate-600 space-y-1'>
+                          <li>• What patterns do you notice?</li>
+                          <li>• How has this dream affected you?</li>
+                          <li>• What insights can you take from it?</li>
+                        </ul>
+                      </div>
+                      <div>
+                        <h5 className='font-medium text-slate-700 text-sm mb-1'>Markdown Tips</h5>
+                        <ul className='text-xs text-slate-600 space-y-1'>
+                          <li>• **Bold** for emphasis</li>
+                          <li>• *Italic* for subtle emphasis</li>
+                          <li>• ## Headers for organization</li>
+                          <li>• - Lists for thoughts</li>
+                        </ul>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
               
               {selectedDream ? (
                 <div>
@@ -444,37 +480,7 @@ What does this dream mean to you?'
             </div>
           </div>
 
-          {/* Help Section */}
-          <div className='mt-8 bg-gradient-to-r from-amber-50 to-orange-50 rounded-xl p-6 border border-amber-200'>
-            <h3 className='text-xl font-semibold mb-4 text-slate-800'>💡 Writing Prompts & Tips</h3>
-            <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
-              <div className='space-y-2'>
-                <h4 className='font-medium text-slate-700'>Interpretation</h4>
-                <ul className='text-sm text-slate-600 space-y-1'>
-                  <li>• What do you think this dream means?</li>
-                  <li>• How does it relate to your current life?</li>
-                  <li>• What emotions did it bring up?</li>
-                </ul>
-              </div>
-              <div className='space-y-2'>
-                <h4 className='font-medium text-slate-700'>Reflection</h4>
-                <ul className='text-sm text-slate-600 space-y-1'>
-                  <li>• What patterns do you notice?</li>
-                  <li>• How has this dream affected you?</li>
-                  <li>• What insights can you take from it?</li>
-                </ul>
-              </div>
-              <div className='space-y-2'>
-                <h4 className='font-medium text-slate-700'>Markdown Tips</h4>
-                <ul className='text-sm text-slate-600 space-y-1'>
-                  <li>• **Bold** for emphasis</li>
-                  <li>• *Italic* for subtle emphasis</li>
-                  <li>• ## Headers for organization</li>
-                  <li>• - Lists for thoughts</li>
-                </ul>
-              </div>
-            </div>
-          </div>
+
         </div>
       </div>
     </Layout>
