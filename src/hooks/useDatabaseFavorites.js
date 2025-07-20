@@ -39,12 +39,15 @@ const GET_USER_FAVORITES = `
 
 export default function useDatabaseFavorites() {
   const [favorites, setFavorites] = useState([])
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   const { getIdTokenClaims, isAuthenticated, isLoading: auth0Loading } = useAuth0()
 
   const fetchFavorites = useCallback(async () => {
-    if (!isAuthenticated || auth0Loading) return
+    if (!isAuthenticated || auth0Loading) {
+      setLoading(false)
+      return
+    }
 
     setLoading(true)
     try {
