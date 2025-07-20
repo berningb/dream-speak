@@ -1,22 +1,17 @@
 import { useState } from 'react'
 import Layout from '../../components/Layout'
 import Analytics from './components/Analytics'
-import Notes from './components/Notes'
-import Favorites from './components/Favorites'
+import FavoritesAndNotes from './components/FavoritesAndNotes'
 
 export default function Reflections() {
-  const [activeView, setActiveView] = useState('landing') // 'landing', 'analytics', 'notes', 'favorites'
+  const [activeView, setActiveView] = useState('landing') // 'landing', 'analytics', 'favorites-notes'
 
   if (activeView === 'analytics') {
     return <Analytics />
   }
 
-  if (activeView === 'notes') {
-    return <Notes />
-  }
-
-  if (activeView === 'favorites') {
-    return <Favorites />
+  if (activeView === 'favorites-notes') {
+    return <FavoritesAndNotes />
   }
 
   return (
@@ -27,7 +22,7 @@ export default function Reflections() {
           Discover patterns, track your dream journey, and reflect on your experiences
         </p>
         <div className='max-w-6xl mx-auto px-4'>
-          <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
+          <div className='grid grid-cols-1 md:grid-cols-2 gap-6'>
             <div className='bg-gradient-to-br from-blue-50 to-indigo-100 rounded-xl p-6 border border-blue-200 shadow-lg hover:shadow-xl transition-all'>
               <div className='text-3xl mb-4'>📊</div>
               <h2 className='text-xl font-semibold mb-4 text-slate-800'>Dream Analytics</h2>
@@ -48,43 +43,23 @@ export default function Reflections() {
               </button>
             </div>
             
-            <div className='bg-gradient-to-br from-purple-50 to-pink-100 rounded-xl p-6 border border-purple-200 shadow-lg hover:shadow-xl transition-all'>
-              <div className='text-3xl mb-4'>📝</div>
-              <h2 className='text-xl font-semibold mb-4 text-slate-800'>Personal Notes</h2>
-              <p className='text-slate-600 mb-4'>
-                Write reflections, interpretations, and personal insights about your dreams
-              </p>
-              <ul className='text-sm text-slate-600 mb-6 space-y-2'>
-                <li>• Dream interpretations</li>
-                <li>• Personal reflections</li>
-                <li>• Life connections</li>
-                <li>• Growth insights</li>
-              </ul>
-              <button 
-                className='btn btn-secondary w-full bg-gradient-to-r from-purple-500 to-pink-600 border-0 hover:from-purple-600 hover:to-pink-700'
-                onClick={() => setActiveView('notes')}
-              >
-                Write Notes
-              </button>
-            </div>
-            
             <div className='bg-gradient-to-br from-yellow-50 to-orange-100 rounded-xl p-6 border border-yellow-200 shadow-lg hover:shadow-xl transition-all'>
-              <div className='text-3xl mb-4'>⭐</div>
-              <h2 className='text-xl font-semibold mb-4 text-slate-800'>Favorites</h2>
+              <div className='text-3xl mb-4'>⭐📝</div>
+              <h2 className='text-xl font-semibold mb-4 text-slate-800'>Favorites & Notes</h2>
               <p className='text-slate-600 mb-4'>
-                View and manage your favorite dreams from your collection and others
+                View your favorite dreams and write personal notes with markdown support
               </p>
               <ul className='text-sm text-slate-600 mb-6 space-y-2'>
                 <li>• Your favorite dreams</li>
                 <li>• Loved dreams from others</li>
-                <li>• Quick access to special dreams</li>
-                <li>• Personal dream collection</li>
+                <li>• Personal notes with markdown</li>
+                <li>• Dream interpretations</li>
               </ul>
               <button 
                 className='btn btn-warning w-full bg-gradient-to-r from-yellow-500 to-orange-600 border-0 hover:from-yellow-600 hover:to-orange-700'
-                onClick={() => setActiveView('favorites')}
+                onClick={() => setActiveView('favorites-notes')}
               >
-                View Favorites
+                View Favorites & Notes
               </button>
             </div>
           </div>
