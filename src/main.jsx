@@ -14,8 +14,8 @@ import MyDreams from './pages/MyDreams'
 import Dream from './pages/Dream'
 import Explore from './pages/Explore'
 import Reflections from './pages/Reflections'
-import Analytics from './pages/Reflections/components/Analytics'
-import FavoritesAndNotes from './pages/Reflections/components/FavoritesAndNotes'
+import Analytics from './pages/Analytics'
+
 import Connections from './pages/Connections'
 // import Whispers from './pages/Connections/components/Whispers'
 // import Reactions from './pages/Connections/components/Reactions'
@@ -59,8 +59,7 @@ const AppRoutes = () => (
       <Route path='/my-dreams' element={<MyDreams />} />
       <Route path='/explore' element={<Explore />} />
       <Route path='/reflections' element={<Reflections />} />
-      <Route path='/reflections/analytics' element={<Analytics />} />
-      <Route path='/reflections/favorites' element={<FavoritesAndNotes />} />
+      <Route path='/analytics' element={<Analytics />} />
       <Route path='/connections' element={<Connections />} />
       <Route path='/signup' element={<Signup />} />
       <Route path='/settings' element={<RequireProfile><Settings /></RequireProfile>} />

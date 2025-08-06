@@ -2,7 +2,7 @@ import { useFirebaseAuth } from '../contexts/FirebaseAuthContext'
 import SelectorTheme from './SelectorTheme'
 
 export default function Menu() {
-  const { isAuthenticated, loginWithGoogle, user } = useFirebaseAuth()
+  const { isAuthenticated, loginWithGoogle, user, logout } = useFirebaseAuth()
 
   return (
     <div className="navbar bg-base-100">
@@ -18,8 +18,8 @@ export default function Menu() {
             <li><a href="/my-dreams">My Dreams</a></li>
             <li><a href="/explore">Explore</a></li>
             <li><a href="/reflections">Reflections</a></li>
+            <li><a href="/analytics">Analytics</a></li>
             <li><a href="/connections">Connections</a></li>
-            <li><a href="/settings">Settings</a></li>
           </ul>
         </div>
         <a href="/" className="btn btn-ghost text-xl">
@@ -33,8 +33,8 @@ export default function Menu() {
           <li><a href="/my-dreams">My Dreams</a></li>
           <li><a href="/explore">Explore</a></li>
           <li><a href="/reflections">Reflections</a></li>
+          <li><a href="/analytics">Analytics</a></li>
           <li><a href="/connections">Connections</a></li>
-          <li><a href="/settings">Settings</a></li>
         </ul>
       </div>
       <div className="navbar-end">
@@ -56,7 +56,7 @@ export default function Menu() {
               </div>
               <ul tabIndex={0} className="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
                 <li><a href="/settings">Profile</a></li>
-                <li><a href="/logout">Logout</a></li>
+                <li><button onClick={logout} className="w-full text-left">Logout</button></li>
               </ul>
             </div>
           )}

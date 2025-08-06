@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useFirebaseAuth } from '../../../contexts/FirebaseAuthContext';
-import { getMyDreams } from '../../../services/firebaseService';
-import Layout from '../../../components/Layout';
+import { useFirebaseAuth } from '../../contexts/FirebaseAuthContext';
+import { getMyDreams } from '../../services/firebaseService';
+import Layout from '../../components/Layout';
 import { 
   PieChart, 
   Pie, 

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useFirebaseAuth } from '../../contexts/FirebaseAuthContext'
-import { getDream, createComment, getComments, createLike, deleteLike, createFavorite, deleteFavorite, getLikes, getFavorites, canUserComment, canUserLike, canUserFavorite, deleteComment, updateComment } from '../../services/firebaseService'
+import { getDream, createComment, getComments, createLike, deleteLike, createFavorite, deleteFavorite, getLikes, getFavorites, canUserComment, canUserLike, canUserFavorite, deleteComment, updateComment, deleteDream } from '../../services/firebaseService'
 import Layout from '../../components/Layout'
 import { formatDreamDate } from '../../utils'
 
@@ -267,8 +267,47 @@ export default function Dream() {
             <div className='card-body'>
               <div className='flex justify-between items-start mb-4'>
                 <h1 className='text-3xl font-bold'>{dream.title}</h1>
-                <div className='text-sm text-base-content/50'>
-                  {formatDreamDate(dream.createdAt || dream.date)}
+                <div className='flex items-center gap-2'>
+                  <div className='text-sm text-base-content/50'>
+                    {formatDreamDate(dream.createdAt || dream.date)}
+                  </div>
+                  
+                  {/* Edit/Delete buttons for dream owner */}
+                  {isAuthenticated && user && dream.userId === user.uid && (
+                    <div className='flex gap-2 ml-4'>
+                      <button
+                        className='btn btn-outline btn-sm'
+                        onClick={() => navigate(`/edit-dream/${dream.id}`)}
+                        title='Edit dream'
+                      >
+                        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                        </svg>
+                        Edit
+                      </button>
+                      
+                      <button
+                        className='btn btn-outline btn-sm text-red-500 hover:text-red-700'
+                        onClick={async () => {
+                          if (window.confirm('Are you sure you want to delete this dream? This action cannot be undone.')) {
+                            try {
+                              await deleteDream(dream.id)
+                              navigate('/my-dreams')
+                            } catch (error) {
+                              console.error('Error deleting dream:', error)
+                              alert('Failed to delete dream. Please try again.')
+                            }
+                          }
+                        }}
+                        title='Delete dream'
+                      >
+                        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                        Delete
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
 

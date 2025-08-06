@@ -1,104 +1,52 @@
-import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import Layout from '../../components/Layout'
 
 export default function Connections() {
-  const [activeTab, setActiveTab] = useState('overview')
-  const navigate = useNavigate()
-
-  const handleTabClick = (tab) => {
-    setActiveTab(tab)
-    switch (tab) {
-      case 'whispers':
-        navigate('/connections/whispers')
-        break
-      case 'reactions':
-        navigate('/connections/reactions')
-        break
-      case 'circles':
-        navigate('/connections/circles')
-        break
-      default:
-        break
-    }
-  }
-
   return (
     <Layout>
-      <div className='flex flex-col items-center justify-start h-screen'>
-        <h1 className='text-4xl font-bold text-center py-6'>Connections</h1>
-        <div className='max-w-4xl mx-auto px-4 w-full'>
-          {/* Navigation tabs */}
-          <div className='tabs tabs-boxed justify-center mb-6'>
-            <button 
-              className={`tab ${activeTab === 'overview' ? 'tab-active' : ''}`}
-              onClick={() => setActiveTab('overview')}
-            >
-              Overview
-            </button>
-            <button 
-              className={`tab ${activeTab === 'whispers' ? 'tab-active' : ''}`}
-              onClick={() => handleTabClick('whispers')}
-            >
-              Whispers
-            </button>
-            <button 
-              className={`tab ${activeTab === 'reactions' ? 'tab-active' : ''}`}
-              onClick={() => handleTabClick('reactions')}
-            >
-              Reactions
-            </button>
-            <button 
-              className={`tab ${activeTab === 'circles' ? 'tab-active' : ''}`}
-              onClick={() => handleTabClick('circles')}
-            >
-              Dream Circles
-            </button>
+      <div className='flex flex-col items-center justify-center min-h-screen p-6'>
+        <div className='text-center max-w-2xl'>
+          <div className='mb-8'>
+            <span className='text-8xl mb-4 block'>🌙</span>
+            <h1 className='text-4xl font-bold mb-4'>Connections</h1>
           </div>
-
-          {/* Overview content */}
-          {activeTab === 'overview' && (
-            <div className='grid grid-cols-1 md:grid-cols-3 gap-6'>
-              <div className='bg-base-200 rounded-lg p-6'>
-                <h2 className='text-xl font-semibold mb-4'>Whispers</h2>
-                <p className='text-base-content/70 mb-4'>
-                  Anonymous dream sharing and responses
-                </p>
-                <button 
-                  className='btn btn-primary w-full'
-                  onClick={() => handleTabClick('whispers')}
-                >
-                  View Whispers
-                </button>
+          
+          <div className='bg-base-200 rounded-lg p-8 mb-8'>
+            <h2 className='text-2xl font-semibold mb-4 text-base-content/80'>Coming Soon</h2>
+            <p className='text-lg mb-6 text-base-content/70'>
+              We&apos;re building amazing ways for dreamers to connect and share experiences.
+            </p>
+            
+            <div className='grid grid-cols-1 md:grid-cols-3 gap-6 mb-6'>
+              <div className='text-center p-4 rounded-lg bg-base-300'>
+                <div className='text-3xl mb-2'>💬</div>
+                <h3 className='font-semibold mb-2'>Whispers</h3>
+                <p className='text-sm text-base-content/60'>Anonymous dream sharing</p>
               </div>
               
-              <div className='bg-base-200 rounded-lg p-6'>
-                <h2 className='text-xl font-semibold mb-4'>Reactions</h2>
-                <p className='text-base-content/70 mb-4'>
-                  See how others respond to your shared dreams
-                </p>
-                <button 
-                  className='btn btn-secondary w-full'
-                  onClick={() => handleTabClick('reactions')}
-                >
-                  View Reactions
-                </button>
+              <div className='text-center p-4 rounded-lg bg-base-300'>
+                <div className='text-3xl mb-2'>❤️</div>
+                <h3 className='font-semibold mb-2'>Reactions</h3>
+                <p className='text-sm text-base-content/60'>See responses to your dreams</p>
               </div>
               
-              <div className='bg-base-200 rounded-lg p-6'>
-                <h2 className='text-xl font-semibold mb-4'>Dream Circles</h2>
-                <p className='text-base-content/70 mb-4'>
-                  Join dream sharing groups and communities
-                </p>
-                <button 
-                  className='btn btn-accent w-full'
-                  onClick={() => handleTabClick('circles')}
-                >
-                  Find Circles
-                </button>
+              <div className='text-center p-4 rounded-lg bg-base-300'>
+                <div className='text-3xl mb-2'>👥</div>
+                <h3 className='font-semibold mb-2'>Dream Circles</h3>
+                <p className='text-sm text-base-content/60'>Join dream communities</p>
               </div>
             </div>
-          )}
+            
+            <p className='text-base-content/60 italic'>
+              Stay tuned for these exciting features that will bring dreamers together!
+            </p>
+          </div>
+          
+          <button 
+            onClick={() => window.history.back()}
+            className='btn btn-primary'
+          >
+            ← Go Back
+          </button>
         </div>
       </div>
     </Layout>

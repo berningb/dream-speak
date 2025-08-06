@@ -32,13 +32,13 @@ export default function SelectorTheme() {
     };
 
     return (
-        <div className={`dropdown dropdown-end ${isOpen ? 'dropdown-open' : ''}`}>
+        <div className={`dropdown dropdown-end ${isOpen ? 'dropdown-open' : ''}`} style={{ zIndex: 1000 }}>
             <button className="btn-ghost btn-circle btn relative" onClick={toggleDropdown}>
                 <IoColorPaletteOutline className="text-xl" />
                 <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-primary border-2 border-base-100"></div>
             </button>
             {isOpen && (
-                <ul className="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-96 grid grid-cols-2 gap-4">
+                <ul className="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-80 sm:w-96 max-w-[calc(100vw-2rem)] grid grid-cols-2 gap-2 sm:gap-4">
                     {themes.map((theme) => (
                         <li key={theme.name} className="w-full">
                             <a 

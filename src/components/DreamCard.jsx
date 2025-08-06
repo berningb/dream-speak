@@ -2,7 +2,7 @@ import { formatDreamDate } from '../utils'
 
 import { useNavigate } from 'react-router-dom'
 
-export default function DreamCard({ dream, showAuthor = true, onClick, showFavoriteButton = false, isFavorited = false, onFavoriteToggle, showCommentButton = false, onCommentClick, likedByMe = false, likeCount = 0, onLikeToggle }) {
+export default function DreamCard({ dream, showAuthor = true, onClick, showFavoriteButton = false, isFavorited = false, onFavoriteToggle, showCommentButton = false, onCommentClick, likedByMe = false, likeCount = 0, onLikeToggle, showEditButton = false, onEditClick, showDeleteButton = false, onDeleteClick }) {
   const navigate = useNavigate()
   
   const handleClick = () => {
@@ -42,16 +42,63 @@ export default function DreamCard({ dream, showAuthor = true, onClick, showFavor
     }
   }
 
+  const handleEditClick = (e) => {
+    e.stopPropagation()
+    if (onEditClick) {
+      onEditClick(dream)
+    }
+  }
+
+  const handleDeleteClick = (e) => {
+    e.stopPropagation()
+    if (onDeleteClick) {
+      onDeleteClick(dream.id)
+    }
+  }
+
   return (
     <div 
       className={`bg-base-200 rounded-lg p-4 h-full flex flex-col relative ${onClick ? 'cursor-pointer hover:bg-base-300 transition-colors' : ''}`}
       onClick={handleClick}
     >
-      {/* Top bar with date */}
-      <div className='flex justify-start items-start mb-3'>
+      {/* Top bar with date and hamburger menu */}
+      <div className='flex justify-between items-start mb-3'>
         <div className='text-sm text-base-content/50'>
           {formatDreamDate(dream.createdAt || dream.date)}
         </div>
+        
+        {/* Hamburger menu for edit/delete */}
+        {(showEditButton || showDeleteButton) && (
+          <div className="dropdown dropdown-end">
+            <div tabIndex={0} role="button" className="btn btn-ghost btn-xs" onClick={(e) => e.stopPropagation()}>
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </div>
+            <ul tabIndex={0} className="dropdown-content menu menu-sm z-[1] mt-2 p-2 shadow bg-base-100 rounded-box w-32">
+              {showEditButton && (
+                <li>
+                  <button onClick={handleEditClick} className="flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    Edit
+                  </button>
+                </li>
+              )}
+              {showDeleteButton && (
+                <li>
+                  <button onClick={handleDeleteClick} className="flex items-center gap-2 text-red-500">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    Delete
+                  </button>
+                </li>
+              )}
+            </ul>
+          </div>
+        )}
       </div>
       
       <div className='mb-3'>

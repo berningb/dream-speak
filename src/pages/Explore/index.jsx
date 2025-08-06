@@ -12,6 +12,10 @@ export default function Explore() {
   const [error, setError] = useState(null)
   const [dreamStats, setDreamStats] = useState({}) // { dreamId: { likeCount, isLiked, isFavorited } }
   const [loadingStats, setLoadingStats] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedTags, setSelectedTags] = useState([])
+  const [availableTags, setAvailableTags] = useState([])
+  const [showAllTags, setShowAllTags] = useState(false)
 
   const fetchDreams = async () => {
     try {
@@ -20,6 +24,16 @@ export default function Explore() {
       const publicDreams = await getPublicDreams()
       console.log('📋 Got', publicDreams.length, 'public dreams')
       setDreams(publicDreams)
+      
+      // Extract all unique tags from dreams
+      const allTags = new Set()
+      publicDreams.forEach(dream => {
+        if (dream.tags && Array.isArray(dream.tags)) {
+          dream.tags.forEach(tag => allTags.add(tag))
+        }
+      })
+      setAvailableTags(Array.from(allTags).sort())
+      
       setError(null)
       
       // Note: Dream stats will be loaded by the useEffect that watches authentication
@@ -239,6 +253,32 @@ export default function Explore() {
     window.location.href = `/dream/${dreamId}`
   }
 
+  // Filter dreams based on search query and selected tags
+  const filteredDreams = dreams.filter(dream => {
+    const matchesSearch = searchQuery === '' || 
+      dream.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      dream.content?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      dream.description?.toLowerCase().includes(searchQuery.toLowerCase())
+    
+    const matchesTags = selectedTags.length === 0 || 
+      (dream.tags && dream.tags.some(tag => selectedTags.includes(tag)))
+    
+    return matchesSearch && matchesTags
+  })
+
+  const handleTagToggle = (tag) => {
+    setSelectedTags(prev => 
+      prev.includes(tag) 
+        ? prev.filter(t => t !== tag)
+        : [...prev, tag]
+    )
+  }
+
+  const clearFilters = () => {
+    setSearchQuery('')
+    setSelectedTags([])
+  }
+
   if (loading) {
     return (
       <Layout>
@@ -286,13 +326,128 @@ export default function Explore() {
             </button>
           </div>
 
+          {/* Search and Filter Section */}
+          <div className='mb-8'>
+            {/* Search Bar */}
+            <div className='flex gap-4 mb-6'>
+              <div className='flex-1 relative'>
+                <input
+                  type='text'
+                  placeholder='Search dreams by title, content, or description...'
+                  className='input input-bordered w-full pl-10'
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+                <svg className='absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-base-content/50' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                  <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z' />
+                </svg>
+              </div>
+              {(searchQuery || selectedTags.length > 0) && (
+                <button
+                  onClick={clearFilters}
+                  className='btn btn-ghost btn-outline'
+                >
+                  Clear Filters
+                </button>
+              )}
+            </div>
+
+            {/* Tag Filters */}
+            {availableTags.length > 0 && (
+              <div className='mb-6'>
+                <h3 className='text-lg font-semibold mb-3'>Filter by Tags</h3>
+                <div className='flex flex-wrap gap-2'>
+                  {/* Show first 5 tags + selected tags */}
+                  {availableTags.slice(0, 5).map(tag => (
+                    <button
+                      key={tag}
+                      onClick={() => handleTagToggle(tag)}
+                      className={`badge badge-lg cursor-pointer transition-all ${
+                        selectedTags.includes(tag)
+                          ? 'badge-primary'
+                          : 'badge-outline hover:badge-primary'
+                      }`}
+                    >
+                      {tag}
+                    </button>
+                  ))}
+                  
+                  {/* Show selected tags that aren't in the first 5 */}
+                  {selectedTags
+                    .filter(tag => !availableTags.slice(0, 5).includes(tag))
+                    .map(tag => (
+                      <button
+                        key={tag}
+                        onClick={() => handleTagToggle(tag)}
+                        className='badge badge-lg badge-primary cursor-pointer transition-all'
+                      >
+                        {tag}
+                      </button>
+                    ))
+                  }
+                  
+                  {/* Show more tags if there are more than 5 */}
+                  {availableTags.length > 5 && (
+                    <div className='flex items-center gap-2'>
+                      <button
+                        onClick={() => setShowAllTags(!showAllTags)}
+                        className='btn btn-ghost btn-sm text-base-content/70 hover:text-base-content'
+                      >
+                        {showAllTags ? 'Show Less' : `Show ${availableTags.length - 5} More`}
+                      </button>
+                    </div>
+                  )}
+                </div>
+                
+                {/* Collapsible section for all tags */}
+                {showAllTags && availableTags.length > 5 && (
+                  <div className='mt-4 p-4 bg-base-200 rounded-lg'>
+                    <h4 className='text-sm font-semibold mb-3 text-base-content/70'>All Tags</h4>
+                    <div className='flex flex-wrap gap-2'>
+                      {availableTags.map(tag => (
+                        <button
+                          key={tag}
+                          onClick={() => handleTagToggle(tag)}
+                          className={`badge badge-lg cursor-pointer transition-all ${
+                            selectedTags.includes(tag)
+                              ? 'badge-primary'
+                              : 'badge-outline hover:badge-primary'
+                          }`}
+                        >
+                          {tag}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Results Count */}
+            <div className='text-sm text-base-content/70 mb-4'>
+              Showing {filteredDreams.length} of {dreams.length} dreams
+              {(searchQuery || selectedTags.length > 0) && (
+                <span className='ml-2'>
+                  (filtered)
+                </span>
+              )}
+            </div>
+          </div>
+
           {(!dreams || dreams.length === 0) ? (
             <div className='text-center'>
               <p className='text-lg mb-4'>No public dreams yet. Be the first to share!</p>
             </div>
+          ) : filteredDreams.length === 0 ? (
+            <div className='text-center'>
+              <p className='text-lg mb-4'>No dreams match your search criteria.</p>
+              <button onClick={clearFilters} className='btn btn-primary'>
+                Clear Filters
+              </button>
+            </div>
           ) : (
             <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
-              {dreams.map((dream) => {
+              {filteredDreams.map((dream) => {
                 const stats = dreamStats[dream.id] || { likeCount: 0, isLiked: false, isFavorited: false }
                 const hasStats = dreamStats[dream.id] !== undefined
                 
@@ -314,7 +469,7 @@ export default function Explore() {
                     likedByMe={hasStats ? stats.isLiked : false}
                     likeCount={hasStats ? stats.likeCount : (loadingStats ? '...' : 0)}
                     onLikeToggle={handleLikeToggle}
-                    showCommentButton={true}
+                    showCommentButton={false}
                     onCommentClick={handleCommentClick}
                   />
                 )

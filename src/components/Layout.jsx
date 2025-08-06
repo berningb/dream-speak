@@ -17,7 +17,7 @@ export default function Layout ({ children }) {
       </div>
       <Menu />
       <div className='border-b border-gray-300' />
-      <div className='content px-8 py-4'>{children}</div>
+      <div className='content px-4 sm:px-6 md:px-8 py-4'>{children}</div>
     </div>
   )
 }
