@@ -1,239 +1,249 @@
 import { useState, useEffect } from 'react'
-import { useAuth0 } from '@auth0/auth0-react'
+import { getPublicDreams, createLike, deleteLike, createFavorite, deleteFavorite, getLikes, getFavorites, canUserLike, canUserFavorite } from '../../services/firebaseService'
+import { useFirebaseAuth } from '../../contexts/FirebaseAuthContext'
 import Layout from '../../components/Layout'
 import DreamCard from '../../components/DreamCard'
-import Comments from '../../components/Comments'
-import useFavorites from '../../hooks/useFavorites'
-import { getApiUrl } from '../../utils'
+import AddDreamModal from '../../components/AddDreamModal'
 
 export default function Explore() {
+  const { isAuthenticated, loginWithGoogle, user } = useFirebaseAuth()
   const [dreams, setDreams] = useState([])
-  const [filteredDreams, setFilteredDreams] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
-  const [searchTerm, setSearchTerm] = useState('')
-  const [selectedMood, setSelectedMood] = useState('')
-  const [selectedTag, setSelectedTag] = useState('')
-  const [commentsOpen, setCommentsOpen] = useState(false)
-  const [selectedDreamId, setSelectedDreamId] = useState(null)
-  const [likeError, setLikeError] = useState(null)
-  const { getIdTokenClaims, isAuthenticated, isLoading: auth0Loading, loginWithRedirect } = useAuth0()
-  const favoritesHook = useFavorites()
-  const isFavorited = isAuthenticated ? favoritesHook.isFavorited : () => false
-  const toggleFavorite = isAuthenticated ? favoritesHook.toggleFavorite : () => {}
+  const [dreamStats, setDreamStats] = useState({}) // { dreamId: { likeCount, isLiked, isFavorited } }
+  const [loadingStats, setLoadingStats] = useState(false)
 
-
-
-  // Get unique moods and tags from dreams
-  const moods = [...new Set(dreams.map(dream => dream.mood).filter(Boolean))]
-  const allTags = [...new Set(dreams.flatMap(dream => dream.tags || []))]
-
-  const DREAMS_QUERY = `
-    query AllDreams {
-      allDreams {
-        id
-        title
-        description
-        date
-        image
-        isPublic
-        tags
-        mood
-        emotions
-        colors
-        user {
-          id
-          email
-          firstName
-          lastName
-        }
-        likeCount
-        likedByMe
-      }
+  const fetchDreams = async () => {
+    try {
+      setLoading(true)
+      console.log('🔄 Fetching public dreams...')
+      const publicDreams = await getPublicDreams()
+      console.log('📋 Got', publicDreams.length, 'public dreams')
+      setDreams(publicDreams)
+      setError(null)
+      
+      // Note: Dream stats will be loaded by the useEffect that watches authentication
+    } catch (err) {
+      setError('Failed to fetch dreams')
+      console.error('❌ Error fetching dreams:', err)
+    } finally {
+      setLoading(false)
     }
-  `
+  }
 
-  const LIKE_DREAM_MUTATION = `
-    mutation LikeDream($dreamId: ID!) {
-      likeDream(dreamId: $dreamId)
+  const loadDreamStats = async (dreamsList) => {
+    if (!user) {
+      console.log('❌ No user, skipping loadDreamStats')
+      return
     }
-  `
-
-  const UNLIKE_DREAM_MUTATION = `
-    mutation UnlikeDream($dreamId: ID!) {
-      unlikeDream(dreamId: $dreamId)
-    }
-  `
-
-  useEffect(() => {
-    const fetchDreams = async () => {
-      try {
-        setLoading(true)
-        const headers = {
-          'Content-Type': 'application/json'
-        }
-        // Wait for Auth0 to finish loading
-        if (auth0Loading) return
-        // Add authorization header only if user is authenticated
-        if (isAuthenticated) {
-          const token = await getIdTokenClaims()
-          if (token && token.__raw) {
-            headers['Authorization'] = `Bearer ${token.__raw}`
-          }
-        }
-        const apiUrl = getApiUrl()
-        const response = await fetch(apiUrl, {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({ query: DREAMS_QUERY })
+    
+    console.log('🔄 Loading dream stats for', dreamsList.length, 'dreams, user:', user.uid)
+    setLoadingStats(true)
+    
+    try {
+      const stats = {}
+      const userFavorites = await getFavorites()
+      console.log('📋 User favorites count:', userFavorites.length)
+      console.log('📋 User favorites dreamIds:', userFavorites.map(fav => fav.dreamId))
+      
+      // Load likes for all dreams in parallel for faster loading
+      const likePromises = dreamsList.map(dream => 
+        getLikes(dream.id).then(likes => ({ dreamId: dream.id, likes }))
+      )
+      
+      const allLikes = await Promise.all(likePromises)
+      
+      for (const { dreamId, likes } of allLikes) {
+        const userLike = likes.find(like => like.userId === user.uid)
+        const userFavorite = userFavorites.find(fav => fav.dreamId === dreamId)
+        
+        console.log(`🔍 Debug dream ${dreamId}:`, {
+          userFavorites: userFavorites.length,
+          userFavorite: userFavorite,
+          dreamId: dreamId,
+          matchingFav: userFavorites.filter(fav => fav.dreamId === dreamId)
         })
-        const data = await response.json()
-        if (data.errors) {
-          throw new Error(data.errors[0].message)
+        
+        stats[dreamId] = {
+          likeCount: likes.length,
+          isLiked: !!userLike,
+          isFavorited: !!userFavorite
         }
-        if (!data.data || !data.data.allDreams) {
-          throw new Error('No dreams data received from server')
-        }
-        // Filter to only show public dreams
-        const publicDreams = data.data.allDreams.filter(dream => dream.isPublic)
-        setDreams(publicDreams)
-        setFilteredDreams(publicDreams)
-      } catch (err) {
-        console.error('Error fetching dreams:', err)
-        setError(err.message)
-      } finally {
-        setLoading(false)
+        
+        console.log(`📊 Dream ${dreamId}: ${likes.length} likes, user liked: ${!!userLike}, favorited: ${!!userFavorite}`)
       }
+      
+      console.log('✅ Final dream stats:', stats)
+      setDreamStats(stats)
+    } catch (error) {
+      console.error('❌ Error loading dream stats:', error)
+    } finally {
+      setLoadingStats(false)
     }
-    // Only fetch after Auth0 is done loading
-    if (!auth0Loading) {
-      fetchDreams()
-    }
-  }, [auth0Loading, isAuthenticated, getIdTokenClaims])
+  }
 
-  // Filter dreams based on search criteria
   useEffect(() => {
-    let filtered = dreams
+    fetchDreams()
+  }, [])
 
-    if (searchTerm) {
-      filtered = filtered.filter(dream => 
-        dream.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        dream.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (dream.tags && dream.tags.some(tag => tag.toLowerCase().includes(searchTerm.toLowerCase())))
-      )
+  // Load dream stats when authentication changes
+  useEffect(() => {
+    if (isAuthenticated && user && dreams.length > 0) {
+      console.log('🔄 Auth changed - loading dream stats for authenticated user:', user.uid)
+      loadDreamStats(dreams)
     }
+  }, [isAuthenticated, user, dreams.length])
 
-    if (selectedMood) {
-      filtered = filtered.filter(dream => dream.mood === selectedMood)
-    }
-
-    if (selectedTag) {
-      filtered = filtered.filter(dream => 
-        dream.tags && dream.tags.includes(selectedTag)
-      )
-    }
-
-    setFilteredDreams(filtered)
-  }, [dreams, searchTerm, selectedMood, selectedTag])
-
-  const clearFilters = () => {
-    setSearchTerm('')
-    setSelectedMood('')
-    setSelectedTag('')
-  }
-
-  const handleFavoriteToggle = (dreamId) => {
-    if (!isAuthenticated) {
-      loginWithRedirect()
-      return
-    }
-    toggleFavorite(dreamId)
-  }
-
-  const handleCommentClick = (dreamId) => {
-    if (!isAuthenticated) {
-      loginWithRedirect()
-      return
-    }
-    setSelectedDreamId(dreamId)
-    setCommentsOpen(true)
+  const handleAddDream = async () => {
+    await fetchDreams() // Refresh dreams after adding
   }
 
   const handleLikeToggle = async (dreamId, likedByMe) => {
     if (!isAuthenticated) {
-      loginWithRedirect()
+      await loginWithGoogle()
       return
     }
+
+    console.log('🔄 Like toggle clicked:', { dreamId, likedByMe, user: user?.uid })
+
+    // Check if user has permission to like this dream
+    const dream = dreams.find(d => d.id === dreamId)
+    if (dream && dream.userId) {
+      const canLike = await canUserLike(dream.userId)
+      if (!canLike) {
+        alert('The dream owner has restricted who can like their dreams.')
+        return
+      }
+    }
+
+    // Update UI immediately for better UX
+    setDreamStats(prev => ({
+      ...prev,
+      [dreamId]: {
+        ...prev[dreamId],
+        isLiked: !likedByMe,
+        likeCount: likedByMe ? (prev[dreamId]?.likeCount || 1) - 1 : (prev[dreamId]?.likeCount || 0) + 1
+      }
+    }))
+
     try {
-      const token = await getIdTokenClaims()
-      const apiUrl = getApiUrl()
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token.__raw}`
-        },
-        body: JSON.stringify({
-          query: likedByMe ? UNLIKE_DREAM_MUTATION : LIKE_DREAM_MUTATION,
-          variables: { dreamId }
-        })
-      })
-      const { errors } = await response.json()
-      if (errors) throw new Error(errors[0].message)
-      // Refresh dreams to update like status/count
-      const fetchDreams = async () => {
-        try {
-          setLoading(true)
-          const headers = {
-            'Content-Type': 'application/json'
-          }
-          if (isAuthenticated) {
-            const token = await getIdTokenClaims()
-            if (token && token.__raw) {
-              headers['Authorization'] = `Bearer ${token.__raw}`
+      if (likedByMe) {
+        // Unlike: find the user's like record and delete it
+        console.log('🔄 Fetching likes to find user like...')
+        const likes = await getLikes(dreamId);
+        console.log('📊 Found likes:', likes)
+        const userLike = likes.find(like => like.userId === user?.uid);
+        console.log('👤 User like found:', userLike)
+        if (userLike) {
+          await deleteLike(userLike.id);
+          console.log('✅ Dream unliked:', dreamId);
+        } else {
+          console.log('⚠️ No user like found to delete')
+          // Revert UI change if delete failed
+          setDreamStats(prev => ({
+            ...prev,
+            [dreamId]: {
+              ...prev[dreamId],
+              isLiked: likedByMe,
+              likeCount: (prev[dreamId]?.likeCount || 0) + 1
             }
-          }
-          const apiUrl = getApiUrl()
-          const response = await fetch(apiUrl, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({ query: DREAMS_QUERY })
-          })
-          const data = await response.json()
-          if (data.errors) {
-            throw new Error(data.errors[0].message)
-          }
-          if (!data.data || !data.data.allDreams) {
-            throw new Error('No dreams data received from server')
-          }
-          const publicDreams = data.data.allDreams.filter(dream => dream.isPublic)
-          setDreams(publicDreams)
-          setFilteredDreams(publicDreams)
-        } catch (err) {
-          console.error('Error fetching dreams:', err)
-          setError(err.message)
-        } finally {
-          setLoading(false)
+          }))
+        }
+      } else {
+        // Like: create a new like record
+        console.log('🔄 Creating new like...')
+        const result = await createLike({ dreamId });
+        console.log('❤️ Dream liked:', dreamId, 'Result:', result);
+      }
+    } catch (error) {
+      console.error('❌ Error toggling like:', error);
+      // Revert UI change on error
+      setDreamStats(prev => ({
+        ...prev,
+        [dreamId]: {
+          ...prev[dreamId],
+          isLiked: likedByMe,
+          likeCount: likedByMe ? (prev[dreamId]?.likeCount || 0) + 1 : (prev[dreamId]?.likeCount || 1) - 1
+        }
+      }))
+    }
+  }
+
+  const handleFavoriteToggle = async (dreamId) => {
+    if (!isAuthenticated) {
+      await loginWithGoogle()
+      return
+    }
+
+    const currentlyFavorited = dreamStats[dreamId]?.isFavorited || false
+
+    // Check if user has permission to favorite this dream
+    const dream = dreams.find(d => d.id === dreamId)
+    if (dream && dream.userId) {
+      const canFav = await canUserFavorite(dream.userId)
+      if (!canFav) {
+        alert('The dream owner has restricted who can favorite their dreams.')
+        return
+      }
+    }
+
+    // Update UI immediately
+    setDreamStats(prev => ({
+      ...prev,
+      [dreamId]: {
+        ...prev[dreamId],
+        isFavorited: !currentlyFavorited
+      }
+    }))
+
+    try {
+      if (currentlyFavorited) {
+        // Unfavorite: find and delete the user's favorite record
+        const userFavorites = await getFavorites()
+        const userFavorite = userFavorites.find(fav => fav.dreamId === dreamId)
+        if (userFavorite) {
+          await deleteFavorite(userFavorite.id)
+          console.log('✅ Dream unfavorited:', dreamId);
+        }
+      } else {
+        // Only create favorite if user doesn't already have one for this dream
+        const userFavorites = await getFavorites()
+        const existingFavorite = userFavorites.find(fav => fav.dreamId === dreamId)
+        
+        if (!existingFavorite) {
+          await createFavorite({ dreamId });
+          console.log('⭐ Dream favorited:', dreamId);
+        } else {
+          console.log('⚠️ Dream already favorited, skipping');
         }
       }
-      fetchDreams()
-      setLikeError(null)
-    } catch (err) {
-      setLikeError(err.message || 'Failed to like/unlike dream')
-      setTimeout(() => setLikeError(null), 4000)
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      // Revert UI change on error
+      setDreamStats(prev => ({
+        ...prev,
+        [dreamId]: {
+          ...prev[dreamId],
+          isFavorited: currentlyFavorited
+        }
+      }))
     }
+  }
+
+  const handleCommentClick = (dreamId) => {
+    if (!isAuthenticated) {
+      loginWithGoogle()
+      return
+    }
+    // Navigate to dream page for comments
+    window.location.href = `/dream/${dreamId}`
   }
 
   if (loading) {
     return (
       <Layout>
-        <div className='flex flex-col items-center justify-start h-screen'>
-          <h1 className='text-4xl font-bold text-center py-6'>Explore Dreams</h1>
-          <div className='max-w-6xl mx-auto px-4 w-full'>
-            <div className='flex justify-center items-center h-64'>
-              <span className='loading loading-spinner loading-lg'></span>
-            </div>
-          </div>
+        <div className="flex justify-center items-center min-h-screen">
+          <span className="loading loading-spinner loading-lg"></span>
         </div>
       </Layout>
     )
@@ -242,12 +252,13 @@ export default function Explore() {
   if (error) {
     return (
       <Layout>
-        <div className='flex flex-col items-center justify-start h-screen'>
-          <h1 className='text-4xl font-bold text-center py-6'>Explore Dreams</h1>
-          <div className='max-w-6xl mx-auto px-4 w-full'>
-            <div className='alert alert-error'>
-              <span>Error loading dreams: {error}</span>
-            </div>
+        <div className="flex justify-center items-center min-h-screen">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold mb-4">Error</h2>
+            <p className="text-error">{error}</p>
+            <button className="btn btn-primary mt-4" onClick={fetchDreams}>
+              Try Again
+            </button>
           </div>
         </div>
       </Layout>
@@ -256,154 +267,62 @@ export default function Explore() {
 
   return (
     <Layout>
-      <div className='flex flex-col items-center justify-start min-h-screen'>
-        <h1 className='text-4xl font-bold text-center py-6'>Explore Dreams</h1>
-        <div className='max-w-6xl mx-auto px-4 w-full'>
-          
-          {/* Sign-up prompt for non-authenticated users */}
-          {!isAuthenticated && (
-            <div className='bg-info text-info-content p-6 rounded-lg mb-6 text-center'>
-              <div className='flex flex-col items-center'>
-                <div className='mb-4'>
-                  <span className='font-semibold text-lg'>👋 Welcome to DreamSpeak!</span>
-                  <p className='text-base mt-2'>You can browse and read dreams. Sign up to favorite, comment, and share your own dreams!</p>
-                </div>
-                <button 
-                  className='btn btn-primary btn-lg w-full max-w-xs'
-                  onClick={() => loginWithRedirect()}
-                >
-                  Sign Up / Log In
-                </button>
-              </div>
-            </div>
-          )}
-          
-          {/* Search and Filter Section */}
-          <div className='card bg-base-100 shadow-xl border border-base-300 mb-8'>
-            <div className='card-body'>
-              <div className='text-center mb-6'>
-                <h2 className='card-title text-2xl justify-center mb-2'>🔍 Discover Dreams</h2>
-                <p className='text-base-content/70'>Search and filter through the dream community</p>
-              </div>
-              
-              <div className='space-y-6'>
-                <div>
-                  <label className='label'>
-                    <span className='label-text font-semibold text-lg'>✨ Search Dreams</span>
-                  </label>
-                  <input 
-                    type='text' 
-                    className='input input-bordered w-full' 
-                    placeholder='Search by title, content, or tags...'
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                  />
-                </div>
-                
-                <div className='grid grid-cols-1 md:grid-cols-3 gap-4'>
-                  <div>
-                    <label className='label'>
-                      <span className='label-text font-medium'>😊 Mood</span>
-                    </label>
-                    <select 
-                      className='select select-bordered w-full'
-                      value={selectedMood}
-                      onChange={(e) => setSelectedMood(e.target.value)}
-                    >
-                      <option value=''>Any mood</option>
-                      {moods.map(mood => (
-                        <option key={mood} value={mood}>{mood}</option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className='label'>
-                      <span className='label-text font-medium'>🏷️ Tags</span>
-                    </label>
-                    <select 
-                      className='select select-bordered w-full'
-                      value={selectedTag}
-                      onChange={(e) => setSelectedTag(e.target.value)}
-                    >
-                      <option value=''>Any tags</option>
-                      {allTags.slice(0, 20).map(tag => (
-                        <option key={tag} value={tag}>{tag}</option>
-                      ))}
-                    </select>
-                  </div>
-                  
-                  <div>
-                    <label className='label'>
-                      <span className='label-text font-medium'>Actions</span>
-                    </label>
-                    <button 
-                      className='btn btn-primary w-full'
-                      onClick={clearFilters}
-                    >
-                      🗑️ Clear Filters
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          {/* Results Section */}
-          {likeError && (
-            <div className='alert alert-error mb-4'>
-              <span>{likeError}</span>
-            </div>
-          )}
-          <div className='space-y-6'>
-            <div className='flex justify-between items-center'>
-              <h2 className='text-2xl font-semibold text-slate-800'>Dream Results</h2>
-              <span className='text-slate-600 bg-slate-100 px-3 py-1 rounded-full text-sm font-medium'>
-                {filteredDreams.length} dream{filteredDreams.length !== 1 ? 's' : ''} found
-              </span>
-            </div>
-
-            
-            {filteredDreams.length === 0 ? (
-              <div className='text-center py-12 bg-slate-50 rounded-xl border border-slate-200'>
-                <div className='text-6xl mb-4'>🌙</div>
-                <p className='text-lg text-slate-700 mb-2'>No dreams match your search criteria.</p>
-                <p className='text-slate-500'>Try adjusting your filters or search terms to discover more dreams.</p>
-              </div>
-            ) : (
-              <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
-                {filteredDreams.map((dream) => (
-                  <DreamCard 
-                    key={dream.id} 
-                    dream={dream} 
-                    showAuthor={true}
-                    showFavoriteButton={isAuthenticated}
-                    isFavorited={isAuthenticated ? isFavorited(dream.id) : false}
-                    onFavoriteToggle={handleFavoriteToggle}
-                    showCommentButton={isAuthenticated}
-                    onCommentClick={handleCommentClick}
-                    likedByMe={dream.likedByMe}
-                    likeCount={dream.likeCount}
-                    onLikeToggle={handleLikeToggle}
-                  />
-                ))}
+      <AddDreamModal onAddDream={handleAddDream} />
+      <div className='flex flex-col items-center justify-start min-h-screen p-6'>
+        <div className='w-full max-w-7xl'>
+          <div className='flex flex-col items-center mb-8'>
+            <h1 className='text-4xl font-bold text-center mb-6'>Explore Dreams</h1>
+            {loadingStats && (
+              <div className="flex items-center gap-2 mb-4 text-sm text-base-content/70">
+                <span className="loading loading-spinner loading-sm"></span>
+                Loading like counts...
               </div>
             )}
+            <button
+              className='btn btn-primary btn-lg flex items-center gap-2'
+              onClick={() => document.getElementById('add_dream_modal').showModal()}
+            >
+              Share Your Dream
+            </button>
           </div>
+
+          {(!dreams || dreams.length === 0) ? (
+            <div className='text-center'>
+              <p className='text-lg mb-4'>No public dreams yet. Be the first to share!</p>
+            </div>
+          ) : (
+            <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
+              {dreams.map((dream) => {
+                const stats = dreamStats[dream.id] || { likeCount: 0, isLiked: false, isFavorited: false }
+                const hasStats = dreamStats[dream.id] !== undefined
+                
+                console.log(`🌟 Dream ${dream.id} favorite state:`, { 
+                  hasStats, 
+                  statsFavorited: stats.isFavorited, 
+                  sending: hasStats ? stats.isFavorited : false 
+                })
+                
+                return (
+                  <DreamCard
+                    key={dream.id}
+                    dream={dream}
+                    showAuthor={true}
+                    showFavoriteButton={true}
+                    isFavorited={hasStats ? stats.isFavorited : false}
+                    onFavoriteToggle={handleFavoriteToggle}
+                    onClick={() => window.location.href = `/dream/${dream.id}`}
+                    likedByMe={hasStats ? stats.isLiked : false}
+                    likeCount={hasStats ? stats.likeCount : (loadingStats ? '...' : 0)}
+                    onLikeToggle={handleLikeToggle}
+                    showCommentButton={true}
+                    onCommentClick={handleCommentClick}
+                  />
+                )
+              })}
+            </div>
+          )}
         </div>
       </div>
-      
-      {/* Comments Modal - only show if authenticated */}
-      {isAuthenticated && (
-        <Comments 
-          dreamId={selectedDreamId}
-          isOpen={commentsOpen}
-          onClose={() => {
-            setCommentsOpen(false)
-            setSelectedDreamId(null)
-          }}
-        />
-      )}
     </Layout>
   )
 } 

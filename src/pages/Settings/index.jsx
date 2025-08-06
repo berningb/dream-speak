@@ -1,13 +1,12 @@
 import { useState, useEffect } from 'react'
-import { useAuth0 } from '@auth0/auth0-react'
-import { useBackendUser } from '../../hooks/useUsers.jsx'
+import { useFirebaseAuth } from '../../contexts/FirebaseAuthContext'
 import Layout from '../../components/Layout'
-import { formatFullDate, getApiUrl } from '../../utils'
-import useApi from '../../hooks/useApi';
+import PrivacySettings from '../../components/PrivacySettings'
+import { formatFullDate } from '../../utils'
+import { getMyDreams, updateUser, debugUserDocument } from '../../services/firebaseService'
 
 export default function Settings() {
-  const { getIdTokenClaims } = useAuth0()
-  const { backendUser, loading, error, refreshBackendUser } = useBackendUser()
+  const { user, loading, error, updateUserProfile } = useFirebaseAuth()
   const [mutationError, setMutationError] = useState(null);
   const [isEditing, setIsEditing] = useState(false)
   const [editForm, setEditForm] = useState({
@@ -16,70 +15,72 @@ export default function Settings() {
     picture: ''
   })
   const [saveLoading, setSaveLoading] = useState(false)
-  const { apiCall } = useApi();
   const [dreamCount, setDreamCount] = useState(0);
   const [publicDreamCount, setPublicDreamCount] = useState(0);
   const [privateDreamCount, setPrivateDreamCount] = useState(0);
+  const [showPrivacySettings, setShowPrivacySettings] = useState(false);
 
-  // Sync editForm with backendUser when loaded
+  // Sync editForm with user when loaded
   useEffect(() => {
-    if (backendUser) {
+    if (user) {
       setEditForm({
-        firstName: backendUser.firstName || '',
-        lastName: backendUser.lastName || '',
-        picture: backendUser.picture || ''
+        firstName: user.displayName?.split(' ')[0] || '',
+        lastName: user.displayName?.split(' ').slice(1).join(' ') || '',
+        picture: user.photoURL || ''
       })
     }
-  }, [backendUser])
+  }, [user])
 
   useEffect(() => {
     async function fetchDreams() {
-      const data = await apiCall(`query { dreams { id isPublic } }`);
-      if (data && data.dreams) {
-        setDreamCount(data.dreams.length);
-        setPublicDreamCount(data.dreams.filter(d => d.isPublic).length);
-        setPrivateDreamCount(data.dreams.filter(d => !d.isPublic).length);
+      try {
+        const dreams = await getMyDreams();
+        if (dreams) {
+          setDreamCount(dreams.length);
+          setPublicDreamCount(dreams.filter(d => d.isPublic).length);
+          setPrivateDreamCount(dreams.filter(d => !d.isPublic).length);
+        }
+      } catch (err) {
+        console.error('Error fetching dreams:', err);
       }
     }
-    fetchDreams();
-  }, [apiCall]);
+    if (user) {
+      fetchDreams();
+    }
+  }, [user]);
 
   const handleSave = async () => {
     try {
       setSaveLoading(true)
-      const token = await getIdTokenClaims()
       
-      const response = await fetch(getApiUrl(), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token.__raw}`
-        },
-        body: JSON.stringify({
-          query: `
-            mutation UpdateUser($firstName: String, $lastName: String, $picture: String) {
-              updateUser(firstName: $firstName, lastName: $lastName, picture: $picture) {
-                id
-                firstName
-                lastName
-                picture
-                email
-              }
-            }
-          `,
-          variables: editForm
-        })
-      })
-
-      const data = await response.json()
+      console.log('🚀 Starting save operation with data:', editForm);
       
-      if (data.errors) {
-        throw new Error(data.errors[0].message)
-      }
+      // Debug user document before save
+      await debugUserDocument();
+      
+      // Update user profile in Firestore
+      const result = await updateUser({
+        firstName: editForm.firstName,
+        lastName: editForm.lastName,
+        picture: editForm.picture
+      });
+      
+      console.log('✅ Firestore save operation result:', result);
+      
+      // Update Firebase Auth profile to keep in sync
+      await updateUserProfile({
+        firstName: editForm.firstName,
+        lastName: editForm.lastName,
+        picture: editForm.picture
+      });
+      
+      console.log('✅ Firebase Auth profile updated');
+      
+      // Debug user document after save
+      await debugUserDocument();
 
-      // Refetch backend user after update
-      await refreshBackendUser()
       setIsEditing(false)
+      setMutationError(null)
     } catch (err) {
       console.error('Error updating user:', err)
       setMutationError(err.message)
@@ -87,12 +88,17 @@ export default function Settings() {
       setSaveLoading(false)
     }
   }
+  
+  const handleDebugUser = async () => {
+    const result = await debugUserDocument();
+    alert(`User Document Debug:\nExists: ${result.exists}\nData: ${JSON.stringify(result.data, null, 2)}`);
+  }
 
   const handleCancel = () => {
     setEditForm({
-      firstName: backendUser?.firstName || '',
-      lastName: backendUser?.lastName || '',
-      picture: backendUser?.picture || ''
+      firstName: user?.displayName?.split(' ')[0] || '',
+      lastName: user?.displayName?.split(' ').slice(1).join(' ') || '',
+      picture: user?.photoURL || ''
     })
     setIsEditing(false)
   }
@@ -104,32 +110,11 @@ export default function Settings() {
 
     try {
       setSaveLoading(true)
-      const token = await getIdTokenClaims()
       
-      const response = await fetch(getApiUrl(), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token.__raw}`
-        },
-        body: JSON.stringify({
-          query: `
-            mutation DeleteUser($auth0Id: String!) {
-              deleteUser(auth0Id: $auth0Id)
-            }
-          `,
-          variables: { auth0Id: backendUser?.id }
-        })
-      })
+      // This part of the logic needs to be adapted for Firebase Auth deletion
+      // For now, we'll just show an error as there's no direct Auth0 ID in Firebase Auth
+      throw new Error('Account deletion is not yet implemented for Firebase Auth.');
 
-      const data = await response.json()
-      
-      if (data.errors) {
-        throw new Error(data.errors[0].message)
-      }
-
-      // Redirect to home or logout
-      window.location.href = '/'
     } catch (err) {
       console.error('Error deleting user:', err)
       setMutationError(err.message)
@@ -196,7 +181,7 @@ export default function Settings() {
                     <input
                       type='email'
                       className='input input-bordered w-full bg-gray-100 cursor-not-allowed'
-                      value={backendUser?.email || ''}
+                      value={user?.email || ''}
                       readOnly
                       tabIndex={-1}
                     />
@@ -251,6 +236,12 @@ export default function Settings() {
                   >
                     Cancel
                   </button>
+                  <button 
+                    className='btn btn-info btn-sm'
+                    onClick={handleDebugUser}
+                  >
+                    Debug User Data
+                  </button>
                 </div>
               </div>
             ) : (
@@ -258,19 +249,19 @@ export default function Settings() {
                 <div className='flex items-center space-x-4'>
                   <div className='avatar'>
                     <div className='w-16 h-16 rounded-full'>
-                      <img src={backendUser?.picture || '/default-avatar.png'} alt='Profile' />
+                      <img src={user?.photoURL || '/default-avatar.png'} alt='Profile' />
                     </div>
                   </div>
                   <div>
                     <h3 className='text-lg font-semibold'>
-                      {backendUser?.firstName || backendUser?.lastName 
-                        ? `${backendUser?.firstName || ''} ${backendUser?.lastName || ''}`.trim()
-                        : backendUser?.email
+                      {user?.displayName 
+                        ? `${user.displayName}`.trim()
+                        : user?.email
                       }
                     </h3>
-                    <p className='text-base-content/70'>{backendUser?.email}</p>
+                    <p className='text-base-content/70'>{user?.email}</p>
                     <p className='text-sm text-base-content/50'>
-                      Member since {backendUser?.createdAt ? formatFullDate(backendUser.createdAt) : 'Unknown'}
+                      Member since {user?.metadata?.creationTime ? formatFullDate(user.metadata.creationTime) : 'Unknown'}
                     </p>
                   </div>
                 </div>
@@ -299,7 +290,12 @@ export default function Settings() {
               <p className='text-base-content/70 mb-4'>
                 Control who can see your dreams and data
               </p>
-              <button className='btn btn-secondary w-full'>Privacy Settings</button>
+              <button 
+                className='btn btn-secondary w-full'
+                onClick={() => setShowPrivacySettings(true)}
+              >
+                Privacy Settings
+              </button>
             </div>
             
             <div className='bg-base-200 rounded-lg p-6'>
@@ -340,6 +336,11 @@ export default function Settings() {
           )}
         </div>
       </div>
+      
+      {/* Privacy Settings Modal */}
+      {showPrivacySettings && (
+        <PrivacySettings onClose={() => setShowPrivacySettings(false)} />
+      )}
     </Layout>
   )
 } 

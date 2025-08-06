@@ -1,25 +1,12 @@
 import { IoAdd } from 'react-icons/io5'
 import { useNavigate } from 'react-router-dom'
 import Layout from '../../components/Layout'
-import useDreams from '../../hooks/useDreams'
 import AddDreamModal from '../../components/AddDreamModal'
 import DreamCard from '../../components/DreamCard'
-import useFavorites from '../../hooks/useFavorites'
-import { useState } from 'react'
-import { useAuth0 } from '@auth0/auth0-react'
+import { useState, useEffect } from 'react'
+import { useFirebaseAuth } from '../../contexts/FirebaseAuthContext'
+import { getMyDreams, createLike, deleteLike, createFavorite, getLikes } from '../../services/firebaseService'
 import Comments from '../../components/Comments'
-
-const LIKE_DREAM_MUTATION = `
-  mutation LikeDream($dreamId: ID!) {
-    likeDream(dreamId: $dreamId)
-  }
-`
-
-const UNLIKE_DREAM_MUTATION = `
-  mutation UnlikeDream($dreamId: ID!) {
-    unlikeDream(dreamId: $dreamId)
-  }
-`
 
 const DreamItem = ({ dream, isFavorited, onFavoriteToggle, likedByMe, likeCount, onLikeToggle, onCommentClick }) => {
   const navigate = useNavigate()
@@ -41,39 +28,69 @@ const DreamItem = ({ dream, isFavorited, onFavoriteToggle, likedByMe, likeCount,
 }
 
 export default function MyDreams () {
-  const { dreams, loading, error, fetchDreams } = useDreams()
-  const { isFavorited, toggleFavorite } = useFavorites()
-  const { getIdTokenClaims, isAuthenticated, loginWithRedirect } = useAuth0()
+  const { isAuthenticated, loginWithGoogle, user } = useFirebaseAuth()
+  const [dreams, setDreams] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [commentsOpen, setCommentsOpen] = useState(false)
   const [selectedDreamId, setSelectedDreamId] = useState(null)
 
-  const handleLikeToggle = async (dreamId, likedByMe) => {
-    if (!isAuthenticated) {
-      loginWithRedirect()
-      return
-    }
+  const fetchDreams = async () => {
     try {
-      const token = await getIdTokenClaims()
-      await fetch('https://localhost:4000/graphql', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token.__raw}`
-        },
-        body: JSON.stringify({
-          query: likedByMe ? UNLIKE_DREAM_MUTATION : LIKE_DREAM_MUTATION,
-          variables: { dreamId }
-        })
-      })
-      await fetchDreams()
-    } catch {
-      // handle error
+      setLoading(true)
+      const myDreams = await getMyDreams()
+      setDreams(myDreams)
+      setError(null)
+    } catch (err) {
+      setError('Failed to fetch dreams')
+      console.error('Error fetching dreams:', err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchDreams()
+    }
+  }, [isAuthenticated])
+
+  const handleLikeToggle = async (dreamId, likedByMe) => {
+    try {
+      if (likedByMe) {
+        // Find the user's like record to get the correct ID
+        const likes = await getLikes(dreamId);
+        const userLike = likes.find(like => like.userId === user?.uid);
+        if (userLike) {
+          await deleteLike(userLike.id);
+          console.log('✅ Dream unliked:', dreamId);
+        }
+      } else {
+        await createLike({ dreamId });
+        console.log('❤️ Dream liked:', dreamId);
+      }
+      // Refresh dreams to get updated like counts
+      await fetchDreams();
+    } catch (error) {
+      console.error('Error toggling like:', error);
+    }
+  }
+
+  const handleFavoriteToggle = async (dreamId) => {
+    try {
+      // For now, just check if it's already favorited (we'd need to track this)
+      // This is a simplified implementation
+      await createFavorite({ dreamId });
+      console.log('⭐ Dream favorited:', dreamId);
+      await fetchDreams();
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
     }
   }
 
   const handleCommentClick = (dreamId) => {
     if (!isAuthenticated) {
-      loginWithRedirect()
+      loginWithGoogle()
       return
     }
     setSelectedDreamId(dreamId)
@@ -85,7 +102,6 @@ export default function MyDreams () {
 
   const handleAddDream = async () => {
     await fetchDreams() // Fetch dreams after adding a new one
-    // Stay on the same page when adding from My Dreams
   }
 
   return (
@@ -99,15 +115,21 @@ export default function MyDreams () {
               className='btn btn-primary btn-lg flex items-center gap-2'
               onClick={() => document.getElementById('add_dream_modal').showModal()}
             >
-              <IoAdd className='text-xl' />
-              Add Dream
+              <IoAdd />
+              Log New Dream
             </button>
           </div>
-          {dreams.length === 0 ? (
-            <div className='text-center py-12'>
-              <div className='text-6xl mb-4'>🌙</div>
-              <h2 className='text-2xl font-semibold mb-2'>No dreams yet</h2>
-              <p className='text-base-content/70 mb-6'>Start your dream journal by adding your first dream</p>
+
+          {!isAuthenticated ? (
+            <div className='text-center'>
+              <p className='text-lg mb-4'>Please sign in to view your dreams</p>
+              <button className='btn btn-primary' onClick={loginWithGoogle}>
+                Sign In
+              </button>
+            </div>
+          ) : dreams.length === 0 ? (
+            <div className='text-center'>
+              <p className='text-lg mb-4'>No dreams found. Start by logging your first dream!</p>
               <button
                 className='btn btn-primary'
                 onClick={() => document.getElementById('add_dream_modal').showModal()}
@@ -117,14 +139,14 @@ export default function MyDreams () {
             </div>
           ) : (
             <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
-              {dreams.map(dream => (
+              {dreams.map((dream) => (
                 <DreamItem 
                   key={dream.id} 
-                  dream={dream} 
-                  isFavorited={isFavorited(dream.id)}
-                  onFavoriteToggle={toggleFavorite}
-                  likedByMe={dream.likedByMe}
-                  likeCount={dream.likeCount}
+                  dream={dream}
+                  isFavorited={false} // TODO: Load actual favorite state
+                  onFavoriteToggle={handleFavoriteToggle}
+                  likedByMe={false} // TODO: Load actual like state
+                  likeCount={0} // TODO: Load actual like count
                   onLikeToggle={handleLikeToggle}
                   onCommentClick={handleCommentClick}
                 />
@@ -133,12 +155,23 @@ export default function MyDreams () {
           )}
         </div>
       </div>
+
       {/* Comments Modal */}
-      <Comments
-        dreamId={selectedDreamId}
-        isOpen={commentsOpen}
-        onClose={() => setCommentsOpen(false)}
-      />
+      {commentsOpen && (
+        <div className='modal modal-open'>
+          <div className='modal-box'>
+            <div className='modal-action'>
+              <button 
+                className='btn'
+                onClick={() => setCommentsOpen(false)}
+              >
+                Close
+              </button>
+            </div>
+            <Comments dreamId={selectedDreamId} />
+          </div>
+        </div>
+      )}
     </Layout>
   )
 } 

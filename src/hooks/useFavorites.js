@@ -1,143 +1,125 @@
-import { useState, useEffect, useCallback } from 'react'
-import { useAuth0 } from '@auth0/auth0-react'
-
-const TOGGLE_FAVORITE_MUTATION = `
-  mutation ToggleFavorite($dreamId: ID!) {
-    toggleFavorite(dreamId: $dreamId)
-  }
-`
-
-const GET_USER_FAVORITES = `
-  query GetUserFavorites {
-    userFavorites {
-      id
-      dreamId
-      createdAt
-      dream {
-        id
-        title
-        description
-        date
-        image
-        isPublic
-        tags
-        mood
-        emotions
-        colors
-        user {
-          id
-          auth0Id
-          email
-          firstName
-          lastName
-          picture
-        }
-      }
-    }
-  }
-`
+import { useState, useEffect } from 'react';
+import { useFirebaseAuth } from '../contexts/FirebaseAuthContext';
+import { 
+  getFavorites, 
+  createFavorite, 
+  deleteFavorite,
+  createNote,
+  updateNote,
+  deleteNote
+} from '../services/firebaseService';
 
 export default function useFavorites() {
-  const [favorites, setFavorites] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
-  const { getIdTokenClaims, isAuthenticated, isLoading: auth0Loading } = useAuth0()
+  const { user, isAuthenticated } = useFirebaseAuth();
+  const [favorites, setFavorites] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const fetchFavorites = useCallback(async () => {
-    if (!isAuthenticated || auth0Loading) {
-      setLoading(false)
-      return
+  const fetchFavorites = async () => {
+    if (!isAuthenticated || !user) {
+      setFavorites([]);
+      setLoading(false);
+      return;
     }
 
-    setLoading(true)
     try {
-      const tokenClaims = await getIdTokenClaims()
-      if (!tokenClaims || !tokenClaims.__raw) {
-        throw new Error('Token not available')
-      }
-
-      const response = await fetch('https://localhost:4000/graphql', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${tokenClaims.__raw}`
-        },
-        body: JSON.stringify({
-          query: GET_USER_FAVORITES
-        })
-      })
-
-      const { data, errors } = await response.json()
-      if (errors) throw new Error(errors[0].message)
-
-      setFavorites(data.userFavorites)
+      setLoading(true);
+      const userFavorites = await getFavorites();
+      setFavorites(userFavorites);
+      setError(null);
     } catch (err) {
-      setError(err.message)
+      console.error('Error fetching favorites:', err);
+      setError(err.message);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [isAuthenticated, auth0Loading, getIdTokenClaims])
+  };
 
-  const toggleFavorite = useCallback(async (dreamId) => {
-    if (!isAuthenticated || auth0Loading) return
-
+  const toggleFavorite = async (dreamId) => {
     try {
-      const tokenClaims = await getIdTokenClaims()
-      if (!tokenClaims || !tokenClaims.__raw) {
-        throw new Error('Token not available')
-      }
-
-      const response = await fetch('https://localhost:4000/graphql', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${tokenClaims.__raw}`
-        },
-        body: JSON.stringify({
-          query: TOGGLE_FAVORITE_MUTATION,
-          variables: { dreamId }
-        })
-      })
-
-      const { data, errors } = await response.json()
-      if (errors) throw new Error(errors[0].message)
-
-      // Refresh favorites after toggle
-      await fetchFavorites()
+      const existingFavorite = favorites.find(fav => fav.dreamId === dreamId);
       
-      return data.toggleFavorite
+      if (existingFavorite) {
+        // Remove favorite
+        await deleteFavorite(existingFavorite.id);
+        setFavorites(prev => prev.filter(fav => fav.id !== existingFavorite.id));
+        return false;
+      } else {
+        // Add favorite
+        const newFavorite = await createFavorite({ dreamId });
+        setFavorites(prev => [...prev, newFavorite]);
+        return true;
+      }
     } catch (err) {
-      setError(err.message)
-      throw err
+      console.error('Error toggling favorite:', err);
+      throw err;
     }
-  }, [isAuthenticated, auth0Loading, getIdTokenClaims, fetchFavorites])
+  };
 
-  const isFavorited = useCallback((dreamId) => {
-    return favorites.some(favorite => favorite.dreamId === dreamId)
-  }, [favorites])
+  const saveNote = async (favoriteId, content) => {
+    try {
+      const note = await createNote({ favoriteId, content });
+      
+      // Update the favorite with the new note
+      setFavorites(prev => prev.map(fav => 
+        fav.id === favoriteId 
+          ? { ...fav, note } 
+          : fav
+      ));
+      
+      return note;
+    } catch (err) {
+      console.error('Error saving note:', err);
+      throw err;
+    }
+  };
 
-  const getFavorites = useCallback(() => {
-    return favorites
-  }, [favorites])
+  const updateExistingNote = async (noteId, content) => {
+    try {
+      const updatedNote = await updateNote(noteId, { content });
+      
+      // Update the favorite with the updated note
+      setFavorites(prev => prev.map(fav => 
+        fav.note?.id === noteId 
+          ? { ...fav, note: updatedNote } 
+          : fav
+      ));
+      
+      return updatedNote;
+    } catch (err) {
+      console.error('Error updating note:', err);
+      throw err;
+    }
+  };
 
-  const removeFavorite = useCallback(async (dreamId) => {
-    await toggleFavorite(dreamId)
-  }, [toggleFavorite])
+  const removeNote = async (noteId) => {
+    try {
+      await deleteNote(noteId);
+      
+      // Remove the note from the favorite
+      setFavorites(prev => prev.map(fav => 
+        fav.note?.id === noteId 
+          ? { ...fav, note: null } 
+          : fav
+      ));
+    } catch (err) {
+      console.error('Error removing note:', err);
+      throw err;
+    }
+  };
 
   useEffect(() => {
-    if (!auth0Loading) {
-      fetchFavorites()
-    }
-  }, [fetchFavorites, auth0Loading])
+    fetchFavorites();
+  }, [isAuthenticated, user]);
 
   return {
     favorites,
     loading,
     error,
     toggleFavorite,
-    isFavorited,
-    getFavorites,
-    removeFavorite,
-    fetchFavorites
-  }
+    saveNote,
+    updateNote: updateExistingNote,
+    removeNote,
+    refetchFavorites: fetchFavorites
+  };
 } 

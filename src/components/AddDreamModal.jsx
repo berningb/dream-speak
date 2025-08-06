@@ -1,9 +1,8 @@
 import { useState } from 'react'
 import { IoClose } from 'react-icons/io5'
-import useDreams from '../hooks/useDreams'
+import { createDream } from '../services/firebaseService'
 
 function AddDreamModal ({ onAddDream }) {
-  const { addDream } = useDreams()
   const [formData, setFormData] = useState({
     title: '',
     description: '',
@@ -40,7 +39,7 @@ function AddDreamModal ({ onAddDream }) {
 
     const newDream = {
       title: formData.title,
-      description: formData.description,
+      content: formData.description, // Firebase uses 'content' instead of 'description'
       date: new Date(formData.date).toISOString(),
       tags: formData.tags,
       isPublic: formData.isPublic,
@@ -55,7 +54,7 @@ function AddDreamModal ({ onAddDream }) {
     }
 
     try {
-      await addDream(newDream)
+      await createDream(newDream)
       // Reset form
       setFormData({
         title: '',

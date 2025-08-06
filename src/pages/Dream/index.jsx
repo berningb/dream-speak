@@ -1,417 +1,468 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { IoArrowBack, IoPencil, IoTrash } from 'react-icons/io5'
+import { useFirebaseAuth } from '../../contexts/FirebaseAuthContext'
+import { getDream, createComment, getComments, createLike, deleteLike, createFavorite, deleteFavorite, getLikes, getFavorites, canUserComment, canUserLike, canUserFavorite, deleteComment, updateComment } from '../../services/firebaseService'
 import Layout from '../../components/Layout'
-import useDreams from '../../hooks/useDreams'
-import EditDreamModal from '../../components/EditDreamModal'
-import { formatFullDate } from '../../utils'
-import Comments from '../../components/Comments'
-import { useAuth0 } from '@auth0/auth0-react'
-
-const DREAM_QUERY = `
-  query Dream($id: ID!) {
-    dream: allDreams {
-      id
-      title
-      description
-      date
-      image
-      isPublic
-      tags
-      mood
-      emotions
-      colors
-      people
-      places
-      things
-      user {
-        id
-        email
-        firstName
-        lastName
-      }
-      likeCount
-      likedByMe
-    }
-  }
-`
-
-const LIKE_DREAM_MUTATION = `
-  mutation LikeDream($dreamId: ID!) {
-    likeDream(dreamId: $dreamId)
-  }
-`
-
-const UNLIKE_DREAM_MUTATION = `
-  mutation UnlikeDream($dreamId: ID!) {
-    unlikeDream(dreamId: $dreamId)
-  }
-`
+import { formatDreamDate } from '../../utils'
 
 export default function Dream() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { loading, error, updateDream, deleteDream } = useDreams()
-  const [isEditModalOpen, setIsEditModalOpen] = useState(false)
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
-  const { getIdTokenClaims, isAuthenticated, loginWithRedirect } = useAuth0()
-  const [dreamData, setDreamData] = useState(null)
-  const [likeLoading, setLikeLoading] = useState(false)
-  const [commentsOpen, setCommentsOpen] = useState(false)
+  const { isAuthenticated, loginWithGoogle, user } = useFirebaseAuth()
+  const [dream, setDream] = useState(null)
+  const [comments, setComments] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [newComment, setNewComment] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [isLiked, setIsLiked] = useState(false)
+  const [likeCount, setLikeCount] = useState(0)
+  const [isFavorited, setIsFavorited] = useState(false)
+  const [userLikeId, setUserLikeId] = useState(null)
+  const [userFavoriteId, setUserFavoriteId] = useState(null)
+  const [editingCommentId, setEditingCommentId] = useState(null)
+  const [editingCommentText, setEditingCommentText] = useState('')
 
   useEffect(() => {
     const fetchDream = async () => {
       try {
-        const headers = { 'Content-Type': 'application/json' }
-        if (isAuthenticated) {
-          const token = await getIdTokenClaims()
-          if (token && token.__raw) {
-            headers['Authorization'] = `Bearer ${token.__raw}`
+        setLoading(true)
+        const dreamData = await getDream(id)
+        if (dreamData) {
+          setDream(dreamData)
+          // Fetch comments for this dream
+          const commentsData = await getComments(id)
+          setComments(commentsData || [])
+          
+          // Load like/favorite state if user is authenticated
+          if (isAuthenticated) {
+            await loadLikeFavoriteState()
           }
+        } else {
+          setError('Dream not found')
         }
-        const response = await fetch('https://localhost:4000/graphql', {
-          method: 'POST',
-          headers,
-          body: JSON.stringify({ query: DREAM_QUERY })
-        })
-        const data = await response.json()
-        if (data.errors) throw new Error(data.errors[0].message)
-        // Find the dream by id
-        const found = data.data.dream.find(d => d.id === id)
-        setDreamData(found)
-      } catch {
-        setDreamData(null)
+      } catch (err) {
+        console.error('Error fetching dream:', err)
+        setError('Failed to load dream')
+      } finally {
+        setLoading(false)
       }
     }
-    fetchDream()
-  }, [id, isAuthenticated, getIdTokenClaims])
 
-  const handleEditDream = async (dreamId, updatedData) => {
+    if (id) {
+      fetchDream()
+    }
+  }, [id, isAuthenticated])
+
+  const loadLikeFavoriteState = async () => {
     try {
-      await updateDream(dreamId, updatedData)
+      // Load likes to check if user liked this dream
+      const likes = await getLikes(id)
+      const userLike = likes.find(like => like.userId === user?.uid)
+      setIsLiked(!!userLike)
+      setUserLikeId(userLike?.id || null)
+      setLikeCount(likes.length)
+
+      // Load favorites to check if user favorited this dream  
+      const favorites = await getFavorites()
+      const userFavorite = favorites.find(fav => fav.dreamId === id)
+      setIsFavorited(!!userFavorite)
+      setUserFavoriteId(userFavorite?.id || null)
     } catch (error) {
-      console.error('Error updating dream:', error)
-      throw error
+      console.error('Error loading like/favorite state:', error)
     }
   }
 
-  const handleDeleteDream = async () => {
-    try {
-      await deleteDream(dreamData.id)
-      navigate('/my-dreams')
-    } catch (error) {
-      console.error('Error deleting dream:', error)
-    }
-  }
-
-  const handleLikeToggle = async (dreamId, likedByMe) => {
+  const handleLike = async () => {
     if (!isAuthenticated) {
-      loginWithRedirect()
+      await loginWithGoogle()
       return
     }
-    setLikeLoading(true)
-    try {
-      const token = await getIdTokenClaims()
-      const response = await fetch('https://localhost:4000/graphql', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token.__raw}`
-        },
-        body: JSON.stringify({
-          query: likedByMe ? UNLIKE_DREAM_MUTATION : LIKE_DREAM_MUTATION,
-          variables: { dreamId }
-        })
-      })
-      const { errors } = await response.json()
-      if (errors) throw new Error(errors[0].message)
-      // Refresh dream data
-      const fetchDream = async () => {
-        try {
-          const headers = { 'Content-Type': 'application/json' }
-          if (isAuthenticated) {
-            const token = await getIdTokenClaims()
-            if (token && token.__raw) {
-              headers['Authorization'] = `Bearer ${token.__raw}`
-            }
-          }
-          const response = await fetch('https://localhost:4000/graphql', {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({ query: DREAM_QUERY })
-          })
-          const data = await response.json()
-          if (data.errors) throw new Error(data.errors[0].message)
-          const found = data.data.dream.find(d => d.id === id)
-          setDreamData(found)
-        } catch {/* ignore */}
+
+    // Check if user has permission to like this dream
+    if (dream && dream.userId) {
+      const canLike = await canUserLike(dream.userId)
+      if (!canLike) {
+        alert('The dream owner has restricted who can like their dreams.')
+        return
       }
-      fetchDream()
-    } finally {
-      setLikeLoading(false)
+    }
+
+    try {
+      if (isLiked && userLikeId) {
+        console.log('Attempting to delete like with ID:', userLikeId)
+        await deleteLike(userLikeId)
+        setIsLiked(false)
+        setUserLikeId(null)
+        setLikeCount(prev => Math.max(0, prev - 1))
+        console.log('✅ Dream unliked')
+      } else {
+        const newLike = await createLike({ dreamId: id })
+        console.log('New like created:', newLike)
+        setIsLiked(true)
+        setUserLikeId(newLike.id)
+        setLikeCount(prev => prev + 1)
+        console.log('❤️ Dream liked, stored ID:', newLike.id)
+      }
+    } catch (error) {
+      console.error('Error toggling like:', error)
     }
   }
-  
-  if (loading) return (
-    <Layout>
-      <div className='flex items-center justify-center min-h-screen'>
-        <div className='loading loading-spinner loading-lg'></div>
-      </div>
-    </Layout>
-  )
-  
-  if (error) return (
-    <Layout>
-      <div className='flex items-center justify-center min-h-screen'>
-        <div className='text-center'>
-          <div className='text-6xl mb-4'>❌</div>
-          <h2 className='text-2xl font-semibold mb-2'>Error Loading Dream</h2>
-          <p className='text-base-content/70'>{error}</p>
-        </div>
-      </div>
-    </Layout>
-  )
-  
-  if (!dreamData) return (
-    <Layout>
-      <div className='flex items-center justify-center min-h-screen'>
-        <div className='text-center'>
-          <div className='text-6xl mb-4'>🔍</div>
-          <h2 className='text-2xl font-semibold mb-2'>Dream Not Found</h2>
-          <p className='text-base-content/70 mb-6'>The dream you&apos;re looking for doesn&apos;t exist</p>
-          <button className='btn btn-primary' onClick={() => navigate('/my-dreams')}>
-            Back to My Dreams
-          </button>
-        </div>
-      </div>
-    </Layout>
-  )
 
-  // Use dreamData instead of dream for rendering
-  const dream = dreamData
+  const handleFavorite = async () => {
+    if (!isAuthenticated) {
+      await loginWithGoogle()
+      return
+    }
+
+    // Check if user has permission to favorite this dream
+    if (dream && dream.userId) {
+      const canFav = await canUserFavorite(dream.userId)
+      if (!canFav) {
+        alert('The dream owner has restricted who can favorite their dreams.')
+        return
+      }
+    }
+
+    try {
+      if (isFavorited && userFavoriteId) {
+        await deleteFavorite(userFavoriteId)
+        setIsFavorited(false)
+        setUserFavoriteId(null)
+        console.log('✅ Removed from favorites')
+      } else {
+        const newFavorite = await createFavorite({ dreamId: id })
+        setIsFavorited(true)
+        setUserFavoriteId(newFavorite.id)
+        console.log('⭐ Added to favorites')
+      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error)
+    }
+  }
+
+  const handleSubmitComment = async (e) => {
+    e.preventDefault()
+    
+    if (!isAuthenticated) {
+      await loginWithGoogle()
+      return
+    }
+
+    if (!newComment.trim()) return
+
+    // Check if user has permission to comment on this dream
+    if (dream && dream.userId) {
+      const canComment = await canUserComment(dream.userId)
+      if (!canComment) {
+        alert('The dream owner has restricted who can comment on their dreams.')
+        return
+      }
+    }
+
+    try {
+      setSubmitting(true)
+      await createComment({
+        content: newComment,
+        dreamId: id
+      })
+      
+      // Refresh comments
+      const updatedComments = await getComments(id)
+      setComments(updatedComments || [])
+      setNewComment('')
+    } catch (err) {
+      console.error('Error creating comment:', err)
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  const handleDeleteComment = async (commentId) => {
+    if (!window.confirm('Are you sure you want to delete this comment?')) {
+      return
+    }
+
+    try {
+      await deleteComment(commentId)
+      
+      // Refresh comments
+      const updatedComments = await getComments(id)
+      setComments(updatedComments || [])
+      console.log('✅ Comment deleted')
+    } catch (err) {
+      console.error('Error deleting comment:', err)
+      alert('Failed to delete comment. Please try again.')
+    }
+  }
+
+  const handleEditComment = (comment) => {
+    setEditingCommentId(comment.id)
+    setEditingCommentText(comment.content)
+  }
+
+  const handleSaveEditComment = async (commentId) => {
+    if (!editingCommentText.trim()) return
+
+    try {
+      await updateComment(commentId, { content: editingCommentText })
+      
+      // Refresh comments
+      const updatedComments = await getComments(id)
+      setComments(updatedComments || [])
+      setEditingCommentId(null)
+      setEditingCommentText('')
+      console.log('✅ Comment updated')
+    } catch (err) {
+      console.error('Error updating comment:', err)
+      alert('Failed to update comment. Please try again.')
+    }
+  }
+
+  const handleCancelEdit = () => {
+    setEditingCommentId(null)
+    setEditingCommentText('')
+  }
+
+  if (loading) {
+    return (
+      <Layout>
+        <div className="flex justify-center items-center min-h-screen">
+          <span className="loading loading-spinner loading-lg"></span>
+        </div>
+      </Layout>
+    )
+  }
+
+  if (error || !dream) {
+    return (
+      <Layout>
+        <div className="flex justify-center items-center min-h-screen">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold mb-4">Dream Not Found</h2>
+            <p className="text-base-content/70 mb-4">{error || 'This dream could not be loaded'}</p>
+            <button className="btn btn-primary" onClick={() => navigate('/explore')}>
+              Back to Explore
+            </button>
+          </div>
+        </div>
+      </Layout>
+    )
+  }
 
   return (
     <Layout>
-      <div className='min-h-screen p-6'>
-        <div className='max-w-4xl mx-auto'>
-          {/* Header */}
-          <div className='flex items-center justify-between mb-8'>
+      <div className='flex flex-col items-center justify-start min-h-screen p-6'>
+        <div className='w-full max-w-4xl'>
+          <div className='mb-6'>
             <button 
-              className='btn btn-ghost btn-sm flex items-center gap-2'
-              onClick={() => navigate('/my-dreams')}
+              className='btn btn-outline mb-4'
+              onClick={() => navigate(-1)}
             >
-              <IoArrowBack />
-              Back to Dreams
+              ← Back
             </button>
-            
-            <div className='flex gap-2'>
-              <button 
-                className='btn btn-outline btn-sm flex items-center gap-2'
-                onClick={() => setIsEditModalOpen(true)}
-              >
-                <IoPencil />
-                Edit
-              </button>
-              <button 
-                className='btn btn-error btn-sm flex items-center gap-2'
-                onClick={() => setIsDeleteModalOpen(true)}
-              >
-                <IoTrash />
-                Delete
-              </button>
-            </div>
           </div>
 
-          {/* Dream Content */}
-          <div className='bg-base-200 rounded-lg p-8 shadow-lg'>
-            <div className='mb-8'>
-              <h1 className='text-4xl font-bold mb-4 text-primary'>{dream.title}</h1>
-              
-              <div className='flex flex-wrap gap-4 mb-6 items-center'>
-                {/* Like button and count */}
-                <button
-                  type="button"
-                  className={`btn btn-sm btn-circle transition-all ${
-                    dream.likedByMe
-                      ? 'btn-error bg-red-500 hover:bg-red-600 text-white shadow-lg scale-110'
-                      : 'btn-ghost bg-white/80 hover:bg-red-100 hover:scale-105'
-                  }`}
-                  onClick={() => handleLikeToggle(dream.id, dream.likedByMe)}
-                  disabled={likeLoading}
-                  title={dream.likedByMe ? 'Unlike' : 'Like'}
-                >
-                  {dream.likedByMe ? '❤️' : '🤍'}
-                </button>
-                <span className='ml-1 text-base text-base-content/60 select-none'>{dream.likeCount}</span>
-                {/* Existing mood/role badges */}
-                {dream.mood && (
-                  <div className='flex items-center gap-2'>
-                    <span className='text-sm font-medium text-base-content/70'>Mood:</span>
-                    <span className='badge badge-primary badge-lg'>{dream.mood}</span>
-                  </div>
-                )}
-                
-                {dream.role !== undefined && (
-                  <div className='flex items-center gap-2'>
-                    <span className='text-sm font-medium text-base-content/70'>Role:</span>
-                    <span className={`badge badge-lg ${dream.role ? 'badge-secondary' : 'badge-outline'}`}>
-                      {dream.role ? 'Main character' : 'Supporting character'}
-                    </span>
-                  </div>
-                )}
-                {/* Comments button */}
-                <button
-                  type="button"
-                  className='btn btn-sm btn-circle btn-ghost bg-white/80 hover:bg-blue-100 transition-all ml-2'
-                  onClick={() => setCommentsOpen(true)}
-                  title='View comments'
-                >
-                  💬
-                </button>
-              </div>
-            </div>
-
-            {/* Dream Details */}
-            <div className='grid grid-cols-1 lg:grid-cols-2 gap-8'>
-              {/* Left Column */}
-              <div className='space-y-6'>
-                {dream.emotions && dream.emotions.length > 0 && (
-                  <div>
-                    <h3 className='text-lg font-semibold mb-3 flex items-center gap-2'>
-                      <span className='text-2xl'>😊</span>
-                      Emotions
-                    </h3>
-                    <div className='flex flex-wrap gap-2'>
-                      {dream.emotions.map((emotion, index) => (
-                        <span key={index} className='badge badge-accent badge-lg'>{emotion}</span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                
-                {dream.colors && dream.colors.length > 0 && (
-                  <div>
-                    <h3 className='text-lg font-semibold mb-3 flex items-center gap-2'>
-                      <span className='text-2xl'>🎨</span>
-                      Colors
-                    </h3>
-                    <div className='flex flex-wrap gap-2'>
-                      {dream.colors.map((color, index) => (
-                        <span key={index} className='badge badge-outline badge-lg'>{color}</span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Right Column */}
-              <div className='space-y-6'>
-                {dream.people && dream.people.length > 0 && (
-                  <div>
-                    <h3 className='text-lg font-semibold mb-3 flex items-center gap-2'>
-                      <span className='text-2xl'>👥</span>
-                      People
-                    </h3>
-                    <div className='flex flex-wrap gap-2'>
-                      {dream.people.map((person, index) => (
-                        <span key={index} className='badge badge-info badge-lg'>{person}</span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                
-                {dream.places && dream.places.length > 0 && (
-                  <div>
-                    <h3 className='text-lg font-semibold mb-3 flex items-center gap-2'>
-                      <span className='text-2xl'>🏛️</span>
-                      Places
-                    </h3>
-                    <div className='flex flex-wrap gap-2'>
-                      {dream.places.map((place, index) => (
-                        <span key={index} className='badge badge-success badge-lg'>{place}</span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                
-                {dream.things && dream.things.length > 0 && (
-                  <div>
-                    <h3 className='text-lg font-semibold mb-3 flex items-center gap-2'>
-                      <span className='text-2xl'>🔮</span>
-                      Things
-                    </h3>
-                    <div className='flex flex-wrap gap-2'>
-                      {dream.things.map((thing, index) => (
-                        <span key={index} className='badge badge-warning badge-lg'>{thing}</span>
-                      ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Dream Description */}
-            {dream.description && (
-              <div className='mt-8 pt-8 border-t border-base-300'>
-                <h3 className='text-lg font-semibold mb-4 flex items-center gap-2'>
-                  <span className='text-2xl'>📝</span>
-                  Dream Description
-                </h3>
-                <div className='bg-base-100 rounded-lg p-6'>
-                  <p className='text-base leading-relaxed'>{dream.description}</p>
+          <div className='card bg-base-100 shadow-xl'>
+            <div className='card-body'>
+              <div className='flex justify-between items-start mb-4'>
+                <h1 className='text-3xl font-bold'>{dream.title}</h1>
+                <div className='text-sm text-base-content/50'>
+                  {formatDreamDate(dream.createdAt || dream.date)}
                 </div>
               </div>
-            )}
 
-            {/* Dream Date */}
-            {dream.createdAt && (
-              <div className='mt-6 text-center'>
-                <span className='text-sm text-base-content/50'>
-                  Dream recorded on {formatFullDate(dream.createdAt)}
-                </span>
+              {dream.image && (
+                <img 
+                  src={dream.image} 
+                  alt={dream.title}
+                  className='w-full h-64 object-cover rounded-lg mb-6'
+                />
+              )}
+
+              <div className='prose max-w-none mb-6'>
+                <p className='text-lg leading-relaxed'>{dream.content}</p>
               </div>
-            )}
+
+              {dream.tags && dream.tags.length > 0 && (
+                <div className='flex flex-wrap gap-2 mb-6'>
+                  {dream.tags.map((tag, index) => (
+                    <span key={index} className='badge badge-outline'>{tag}</span>
+                  ))}
+                </div>
+              )}
+
+              {dream.mood && (
+                <div className='mb-6'>
+                  <span className='font-semibold'>Mood: </span>
+                  <span className='badge badge-primary'>{dream.mood}</span>
+                </div>
+              )}
+
+              {/* Action buttons */}
+              <div className='flex items-center gap-6 mb-6'>
+                <button
+                  className={`btn btn-ghost btn-sm flex items-center gap-2 ${isLiked ? 'text-red-500' : ''}`}
+                  onClick={handleLike}
+                >
+                  {isLiked ? (
+                    <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/>
+                    </svg>
+                  ) : (
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                    </svg>
+                  )}
+                  <span>{isLiked ? 'Unlike' : 'Like'}</span>
+                  {likeCount > 0 && <span className="text-xs opacity-60">({likeCount})</span>}
+                </button>
+                
+                <button
+                  className={`btn btn-ghost btn-sm flex items-center gap-2 ${isFavorited ? 'text-yellow-500' : ''}`}
+                  onClick={handleFavorite}
+                >
+                  {isFavorited ? (
+                    <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
+                    </svg>
+                  ) : (
+                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.196-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z" />
+                    </svg>
+                  )}
+                  <span>{isFavorited ? 'Unfavorite' : 'Favorite'}</span>
+                </button>
+              </div>
+
+              {/* Comments Section */}
+              <div className='border-t pt-6'>
+                <h3 className='text-xl font-semibold mb-4'>Comments</h3>
+                
+                {!isAuthenticated ? (
+                  <div className='text-center py-8'>
+                    <p className='text-base-content/70 mb-4'>Sign in to leave a comment</p>
+                    <button 
+                      className='btn btn-primary'
+                      onClick={loginWithGoogle}
+                    >
+                      Sign in with Google
+                    </button>
+                  </div>
+                ) : (
+                  <form onSubmit={handleSubmitComment} className='mb-6'>
+                    <div className='flex gap-2'>
+                      <input
+                        type='text'
+                        className='input input-bordered flex-1'
+                        placeholder='Add a comment...'
+                        value={newComment}
+                        onChange={(e) => setNewComment(e.target.value)}
+                        disabled={submitting}
+                      />
+                      <button 
+                        type='submit' 
+                        className='btn btn-primary'
+                        disabled={submitting || !newComment.trim()}
+                      >
+                        {submitting ? (
+                          <span className='loading loading-spinner loading-sm'></span>
+                        ) : (
+                          'Comment'
+                        )}
+                      </button>
+                    </div>
+                  </form>
+                )}
+
+                <div className='space-y-4'>
+                  {comments.length === 0 ? (
+                    <p className='text-base-content/70 text-center py-4'>No comments yet. Be the first to comment!</p>
+                  ) : (
+                    comments.map((comment) => (
+                      <div key={comment.id} className='bg-base-200 rounded-lg p-4'>
+                        <div className='flex justify-between items-start mb-2'>
+                          <span className='font-semibold'>{comment.user?.displayName || 'Anonymous'}</span>
+                          <div className='flex items-center gap-2'>
+                            <span className='text-sm text-base-content/50'>
+                              {comment.createdAt?.seconds 
+                                ? formatDreamDate(new Date(comment.createdAt.seconds * 1000).toISOString())
+                                : 'Just now'
+                              }
+                              {comment.updatedAt && comment.updatedAt.seconds !== comment.createdAt?.seconds && (
+                                <span className='ml-1 text-xs'>(edited)</span>
+                              )}
+                            </span>
+                            {isAuthenticated && (
+                              <div className='flex gap-1'>
+                                {(comment.userId === user?.uid) && (
+                                  <button
+                                    className='btn btn-ghost btn-xs'
+                                    onClick={() => handleEditComment(comment)}
+                                    title='Edit comment'
+                                  >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                                    </svg>
+                                  </button>
+                                )}
+                                {(comment.userId === user?.uid || dream?.userId === user?.uid) && (
+                                  <button
+                                    className='btn btn-ghost btn-xs text-red-500 hover:text-red-700'
+                                    onClick={() => handleDeleteComment(comment.id)}
+                                    title='Delete comment'
+                                  >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                    </svg>
+                                  </button>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        {editingCommentId === comment.id ? (
+                          <div className='flex gap-2'>
+                            <input
+                              type='text'
+                              className='input input-bordered input-sm flex-1'
+                              value={editingCommentText}
+                              onChange={(e) => setEditingCommentText(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  handleSaveEditComment(comment.id)
+                                } else if (e.key === 'Escape') {
+                                  handleCancelEdit()
+                                }
+                              }}
+                              autoFocus
+                            />
+                            <button
+                              className='btn btn-primary btn-sm'
+                              onClick={() => handleSaveEditComment(comment.id)}
+                              disabled={!editingCommentText.trim()}
+                            >
+                              Save
+                            </button>
+                            <button
+                              className='btn btn-ghost btn-sm'
+                              onClick={handleCancelEdit}
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <p>{comment.content}</p>
+                        )}
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-      
-      <EditDreamModal
-        dream={dream}
-        isOpen={isEditModalOpen}
-        onClose={() => setIsEditModalOpen(false)}
-        onSave={handleEditDream}
-      />
-
-      {/* Delete Confirmation Modal */}
-      <dialog id="delete_dream_modal" className={`modal ${isDeleteModalOpen ? 'modal-open' : ''}`}>
-        <div className="modal-box">
-          <h3 className="font-bold text-lg mb-4">Delete Dream</h3>
-          <p className="mb-6">Are you sure you want to delete &quot;{dream?.title}&quot;? This action cannot be undone.</p>
-          <div className="modal-action">
-            <button 
-              className="btn btn-outline" 
-              onClick={() => setIsDeleteModalOpen(false)}
-            >
-              Cancel
-            </button>
-            <button 
-              className="btn btn-error" 
-              onClick={handleDeleteDream}
-            >
-              Delete Dream
-            </button>
-          </div>
-        </div>
-        <form method="dialog" className="modal-backdrop">
-          <button onClick={() => setIsDeleteModalOpen(false)}>close</button>
-        </form>
-      </dialog>
-      {/* Comments Modal */}
-      <Comments
-        dreamId={dream.id}
-        isOpen={commentsOpen}
-        onClose={() => setCommentsOpen(false)}
-      />
     </Layout>
   )
 } 

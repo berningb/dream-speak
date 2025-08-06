@@ -1,315 +1,408 @@
-import { useState, useEffect } from 'react'
-import { useAuth0 } from '@auth0/auth0-react'
-import { useNavigate } from 'react-router-dom'
-import Layout from '../../../components/Layout'
+import { useState, useEffect } from 'react';
+import { useFirebaseAuth } from '../../../contexts/FirebaseAuthContext';
+import { getMyDreams } from '../../../services/firebaseService';
+import Layout from '../../../components/Layout';
+import { 
+  PieChart, 
+  Pie, 
+  Cell, 
+  BarChart, 
+  Bar, 
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip, 
+  ResponsiveContainer,
+  Area,
+  AreaChart
+} from 'recharts';
+
+// Custom colors for charts
+const MOOD_COLORS = {
+  happy: '#10B981',
+  peaceful: '#3B82F6', 
+  excited: '#F59E0B',
+  confused: '#8B5CF6',
+  scared: '#EF4444',
+  sad: '#6B7280',
+  anxious: '#F97316',
+  neutral: '#6B7280'
+};
+
+
 
 export default function Analytics() {
-  const navigate = useNavigate()
-  const [dreams, setDreams] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
-  const { getIdTokenClaims, isLoading: auth0Loading } = useAuth0()
+  const { user, isAuthenticated } = useFirebaseAuth();
+  const [dreams, setDreams] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  const fetchDreams = async () => {
+    if (!isAuthenticated || !user) {
+      setLoading(false);
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const userDreams = await getMyDreams();
+      console.log('🔄 Fetched dreams for analytics:', userDreams.length);
+      setDreams(userDreams);
+    } catch (error) {
+      console.error('Error fetching dreams:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
-    const fetchDreams = async () => {
-      try {
-        setLoading(true)
-        const token = await getIdTokenClaims()
-        
-        if (!token || !token.__raw) {
-          throw new Error('Token not available')
-        }
-        
-        const response = await fetch('https://localhost:4000/graphql', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token.__raw}`
-          },
-          body: JSON.stringify({
-            query: `
-              query {
-                dreams {
-                  id
-                  title
-                  description
-                  date
-                  mood
-                  emotions
-                  colors
-                  people
-                  places
-                  things
-                  tags
-                }
-              }
-            `
-          })
-        })
+    fetchDreams();
+  }, [isAuthenticated, user]);
 
-        const data = await response.json()
-        
-        if (data.errors) {
-          throw new Error(data.errors[0].message)
-        }
-
-        setDreams(data.data.dreams)
-        console.log('[Analytics] dreams fetched:', data.data.dreams)
-      } catch (err) {
-        console.error('Error fetching dreams:', err)
-        setError(err.message)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    // Only fetch dreams when Auth0 is not loading and we have a token
-    if (!auth0Loading) {
-      fetchDreams()
-    }
-  }, [getIdTokenClaims, auth0Loading])
-
-  // Analytics calculations
-  const totalDreams = dreams.length
-  const dreamsThisMonth = dreams.filter(dream => {
-    const dreamDate = new Date(dream.date)
-    const now = new Date()
-    return dreamDate.getMonth() === now.getMonth() && dreamDate.getFullYear() === now.getFullYear()
-  }).length
-
+  // Calculate analytics
+  const totalDreams = dreams.length;
+  const publicDreams = dreams.filter(dream => dream.isPublic).length;
+  const privateDreams = totalDreams - publicDreams;
+  
   // Mood analysis
   const moodCounts = dreams.reduce((acc, dream) => {
     if (dream.mood) {
-      acc[dream.mood] = (acc[dream.mood] || 0) + 1
+      acc[dream.mood] = (acc[dream.mood] || 0) + 1;
     }
-    return acc
-  }, {})
+    return acc;
+  }, {});
 
-  // Most common emotions
-  const allEmotions = dreams.flatMap(dream => dream.emotions || [])
-  const emotionCounts = allEmotions.reduce((acc, emotion) => {
-    acc[emotion] = (acc[emotion] || 0) + 1
-    return acc
-  }, {})
-  const topEmotions = Object.entries(emotionCounts)
+  // Convert mood data for pie chart
+  const moodChartData = Object.entries(moodCounts).map(([mood, count]) => ({
+    name: mood.charAt(0).toUpperCase() + mood.slice(1),
+    value: count,
+    color: MOOD_COLORS[mood] || '#6B7280'
+  }));
+
+  // Privacy distribution for pie chart
+  const privacyData = [
+    { name: 'Public', value: publicDreams, color: '#10B981' },
+    { name: 'Private', value: privateDreams, color: '#EF4444' }
+  ].filter(item => item.value > 0);
+
+  // Tag analysis
+  const tagCounts = dreams.reduce((acc, dream) => {
+    if (dream.tags) {
+      dream.tags.forEach(tag => {
+        acc[tag] = (acc[tag] || 0) + 1;
+      });
+    }
+    return acc;
+  }, {});
+
+  // Convert tag data for bar chart (top 10)
+  const tagChartData = Object.entries(tagCounts)
     .sort(([,a], [,b]) => b - a)
-    .slice(0, 5)
-
-  // Most common colors
-  const allColors = dreams.flatMap(dream => dream.colors || [])
-  const colorCounts = allColors.reduce((acc, color) => {
-    acc[color] = (acc[color] || 0) + 1
-    return acc
-  }, {})
-  const topColors = Object.entries(colorCounts)
-    .sort(([,a], [,b]) => b - a)
-    .slice(0, 5)
-
-  // Most common places
-  const allPlaces = dreams.flatMap(dream => dream.places || [])
-  const placeCounts = allPlaces.reduce((acc, place) => {
-    acc[place] = (acc[place] || 0) + 1
-    return acc
-  }, {})
-  const topPlaces = Object.entries(placeCounts)
-    .sort(([,a], [,b]) => b - a)
-    .slice(0, 5)
-
-  // Dream frequency by month (last 6 months)
-  const getMonthName = (date) => {
-    return new Date(date).toLocaleDateString('en-US', { month: 'short' })
-  }
-
-  const monthlyData = Array.from({ length: 6 }, (_, i) => {
-    const date = new Date()
-    date.setMonth(date.getMonth() - i)
-    const month = date.getMonth()
-    const year = date.getFullYear()
-    
-    const count = dreams.filter(dream => {
-      const dreamDate = new Date(dream.date)
-      return dreamDate.getMonth() === month && dreamDate.getFullYear() === year
-    }).length
-
-    return {
-      month: getMonthName(date),
+    .slice(0, 10)
+    .map(([tag, count]) => ({
+      tag: tag.length > 10 ? tag.substring(0, 10) + '...' : tag,
       count
-    }
-  }).reverse()
+    }));
 
-  if (auth0Loading || loading) {
+  // Dream frequency over time (last 30 days)
+  const getDreamFrequencyData = () => {
+    const last30Days = Array.from({ length: 30 }, (_, i) => {
+      const date = new Date();
+      date.setDate(date.getDate() - (29 - i));
+      return date.toISOString().split('T')[0];
+    });
+
+    const dreamsByDate = dreams.reduce((acc, dream) => {
+      if (dream.createdAt) {
+        try {
+          let dreamDate;
+          // Handle both Firestore timestamp and ISO string formats
+          if (typeof dream.createdAt === 'string') {
+            dreamDate = new Date(dream.createdAt).toISOString().split('T')[0];
+          } else if (dream.createdAt.seconds) {
+            dreamDate = new Date(dream.createdAt.seconds * 1000).toISOString().split('T')[0];
+          } else {
+            return acc;
+          }
+          acc[dreamDate] = (acc[dreamDate] || 0) + 1;
+        } catch (error) {
+          console.warn('Invalid date in dream:', dream.id, error);
+        }
+      }
+      return acc;
+    }, {});
+
+    // Debug logging
+    console.log('📊 Analytics Debug:');
+    console.log('Total dreams loaded:', dreams.length);
+    console.log('Dreams by date:', dreamsByDate);
+    console.log('Date range:', last30Days[0], 'to', last30Days[last30Days.length - 1]);
+
+    const chartData = last30Days.map(date => ({
+      date: new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }),
+      dreams: dreamsByDate[date] || 0
+    }));
+
+    console.log('Chart data:', chartData);
+    return chartData;
+  };
+
+  const frequencyData = getDreamFrequencyData();
+
+  // Average dream length
+  const avgDreamLength = dreams.length > 0 
+    ? Math.round(dreams.reduce((acc, dream) => acc + (dream.content?.length || 0), 0) / dreams.length)
+    : 0;
+
+  // Dreams per week
+  const dreamsThisWeek = dreams.filter(dream => {
+    if (!dream.createdAt) return false;
+    try {
+      // Handle both Firestore timestamp and ISO string formats
+      let dreamDate;
+      if (typeof dream.createdAt === 'string') {
+        dreamDate = new Date(dream.createdAt);
+      } else if (dream.createdAt.seconds) {
+        dreamDate = new Date(dream.createdAt.seconds * 1000);
+      } else {
+        return false;
+      }
+      
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      return dreamDate >= weekAgo;
+    } catch (error) {
+      console.warn('Invalid date in dream for weekly filter:', dream.id, error);
+      return false;
+    }
+  }).length;
+
+  if (loading) {
     return (
       <Layout>
-        <div className='flex flex-col items-center justify-start h-screen'>
-          <div className='w-full max-w-6xl mx-auto px-4 mb-4'>
-            <button 
-              onClick={() => navigate('/reflections')}
-              className='btn btn-outline btn-sm mb-4'
-            >
-              ← Back to Reflections
-            </button>
-          </div>
-          <h1 className='text-4xl font-bold text-center py-6'>Dream Analytics</h1>
-          <div className='max-w-6xl mx-auto px-4 w-full'>
-            <div className='flex justify-center items-center h-64'>
-              <span className='loading loading-spinner loading-lg'></span>
-            </div>
-          </div>
+        <div className="flex justify-center items-center min-h-screen">
+          <span className="loading loading-spinner loading-lg"></span>
         </div>
       </Layout>
-    )
+    );
   }
 
-  if (error) {
+  if (!isAuthenticated) {
     return (
       <Layout>
-        <div className='flex flex-col items-center justify-start h-screen'>
-          <div className='w-full max-w-6xl mx-auto px-4 mb-4'>
-            <button 
-              onClick={() => navigate('/reflections')}
-              className='btn btn-outline btn-sm mb-4'
-            >
-              ← Back to Reflections
-            </button>
-          </div>
-          <h1 className='text-4xl font-bold text-center py-6'>Dream Analytics</h1>
-          <div className='max-w-6xl mx-auto px-4 w-full'>
-            <div className='alert alert-error'>
-              <span>Error loading dreams: {error}</span>
-            </div>
-          </div>
+        <div className="flex flex-col items-center justify-center min-h-screen">
+          <h1 className="text-2xl font-bold mb-4">Please sign in to view analytics</h1>
         </div>
       </Layout>
-    )
+    );
   }
 
   return (
     <Layout>
-      <div className='flex flex-col items-center justify-start min-h-screen'>
-        <div className='w-full max-w-6xl mx-auto px-4 mb-4'>
-          <button 
-            onClick={() => navigate('/reflections')}
-            className='btn btn-outline btn-sm mb-4'
-          >
-            ← Back to Reflections
-          </button>
+      <div className="container mx-auto p-6">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold">Dream Analytics</h1>
         </div>
-        <h1 className='text-4xl font-bold text-center py-6'>Dream Analytics</h1>
-        <div className='max-w-6xl mx-auto px-4 w-full'>
-          {/* Overview Stats */}
-          <div className='grid grid-cols-1 md:grid-cols-3 gap-6 mb-8'>
-            <div className='bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-6 border border-blue-200'>
-              <div className='text-2xl font-bold text-blue-800'>{totalDreams}</div>
-              <div className='text-blue-600'>Total Dreams</div>
-            </div>
-            <div className='bg-gradient-to-br from-green-50 to-green-100 rounded-xl p-6 border border-green-200'>
-              <div className='text-2xl font-bold text-green-800'>{dreamsThisMonth}</div>
-              <div className='text-green-600'>This Month</div>
-            </div>
-            <div className='bg-gradient-to-br from-purple-50 to-purple-100 rounded-xl p-6 border border-purple-200'>
-              <div className='text-2xl font-bold text-purple-800'>{Object.keys(moodCounts).length}</div>
-              <div className='text-purple-600'>Unique Moods</div>
-            </div>
+        
+        {/* Overview Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+          <div className="stat bg-base-200 rounded-lg">
+            <div className="stat-title">Total Dreams</div>
+            <div className="stat-value text-primary">{totalDreams}</div>
+            <div className="stat-desc">All time</div>
           </div>
+          <div className="stat bg-base-200 rounded-lg">
+            <div className="stat-title">This Week</div>
+            <div className="stat-value text-secondary">{dreamsThisWeek}</div>
+            <div className="stat-desc">Last 7 days</div>
+          </div>
+          <div className="stat bg-base-200 rounded-lg">
+            <div className="stat-title">Avg Length</div>
+            <div className="stat-value text-accent">{avgDreamLength}</div>
+            <div className="stat-desc">Characters</div>
+          </div>
+          <div className="stat bg-base-200 rounded-lg">
+            <div className="stat-title">Dream Rate</div>
+            <div className="stat-value text-info">{(dreamsThisWeek / 7).toFixed(1)}</div>
+            <div className="stat-desc">Per day</div>
+          </div>
+        </div>
 
-          <div className='grid grid-cols-1 lg:grid-cols-2 gap-8'>
+        {totalDreams === 0 && (
+          <div className="text-center py-12">
+            <h2 className="text-xl font-semibold mb-4">No dreams yet!</h2>
+            <p className="text-gray-600 mb-6">Start logging your dreams to see beautiful analytics and insights.</p>
+            <a href="/my-dreams" className="btn btn-primary">Start Dreaming</a>
+          </div>
+        )}
+
+        {totalDreams > 0 && (
+          <>
             {/* Dream Frequency Chart */}
-            <div className='bg-white rounded-xl p-6 border border-slate-200 shadow-lg'>
-              <h3 className='text-xl font-semibold mb-4 text-slate-800'>Dream Frequency (Last 6 Months)</h3>
-              <div className='space-y-3'>
-                {monthlyData.map(({ month, count }) => (
-                  <div key={month} className='flex items-center gap-4'>
-                    <div className='w-16 text-sm font-medium text-slate-600'>{month}</div>
-                    <div className='flex-1 bg-slate-200 rounded-full h-4'>
-                      <div 
-                        className='bg-gradient-to-r from-blue-500 to-purple-600 h-4 rounded-full transition-all'
-                        style={{ width: `${Math.max((count / Math.max(...monthlyData.map(d => d.count))) * 100, 10)}%` }}
-                      ></div>
-                    </div>
-                    <div className='w-8 text-sm font-medium text-slate-600'>{count}</div>
-                  </div>
-                ))}
+            <div className="mb-8">
+              <h2 className="text-2xl font-semibold mb-4">Dream Frequency (Last 30 Days)</h2>
+              <div className="bg-base-200 p-6 rounded-lg">
+                <ResponsiveContainer width="100%" height={300}>
+                  <AreaChart data={frequencyData}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="date" />
+                    <YAxis />
+                    <Tooltip />
+                    <Area 
+                      type="monotone" 
+                      dataKey="dreams" 
+                      stroke="#8884d8" 
+                      fill="#8884d8" 
+                      fillOpacity={0.3}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
               </div>
             </div>
 
-            {/* Mood Distribution */}
-            <div className='bg-white rounded-xl p-6 border border-slate-200 shadow-lg'>
-              <h3 className='text-xl font-semibold mb-4 text-slate-800'>Mood Distribution</h3>
-              {Object.keys(moodCounts).length > 0 ? (
-                <div className='space-y-3'>
-                  {Object.entries(moodCounts)
-                    .sort(([,a], [,b]) => b - a)
-                    .map(([mood, count]) => (
-                      <div key={mood} className='flex items-center gap-4'>
-                        <div className='flex-1 text-sm font-medium text-slate-700'>{mood}</div>
-                        <div className='flex-1 bg-slate-200 rounded-full h-3'>
+            {/* Charts Grid */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+              
+              {/* Mood Distribution */}
+              {moodChartData.length > 0 && (
+                <div>
+                  <h2 className="text-2xl font-semibold mb-4">Mood Distribution</h2>
+                  <div className="bg-base-200 p-6 rounded-lg">
+                    <ResponsiveContainer width="100%" height={300}>
+                      <PieChart>
+                        <Pie
+                          data={moodChartData}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                          outerRadius={80}
+                          fill="#8884d8"
+                          dataKey="value"
+                        >
+                          {moodChartData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              )}
+
+              {/* Privacy Distribution */}
+              {privacyData.length > 1 && (
+                <div>
+                  <h2 className="text-2xl font-semibold mb-4">Privacy Settings</h2>
+                  <div className="bg-base-200 p-6 rounded-lg">
+                    <ResponsiveContainer width="100%" height={300}>
+                      <PieChart>
+                        <Pie
+                          data={privacyData}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                          outerRadius={80}
+                          fill="#8884d8"
+                          dataKey="value"
+                        >
+                          {privacyData.map((entry, index) => (
+                            <Cell key={`cell-${index}`} fill={entry.color} />
+                          ))}
+                        </Pie>
+                        <Tooltip />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Popular Tags Chart */}
+            {tagChartData.length > 0 && (
+              <div className="mb-8">
+                <h2 className="text-2xl font-semibold mb-4">Most Popular Tags</h2>
+                <div className="bg-base-200 p-6 rounded-lg">
+                  <ResponsiveContainer width="100%" height={300}>
+                    <BarChart data={tagChartData}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="tag" />
+                      <YAxis />
+                      <Tooltip />
+                      <Bar dataKey="count" fill="#8884d8" />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              </div>
+            )}
+
+            {/* Detailed Statistics */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+              
+              {/* Mood Analysis Table */}
+              {Object.keys(moodCounts).length > 0 && (
+                <div>
+                  <h2 className="text-2xl font-semibold mb-4">Mood Breakdown</h2>
+                  <div className="bg-base-200 rounded-lg overflow-hidden">
+                    <table className="table w-full">
+                      <thead>
+                        <tr>
+                          <th>Mood</th>
+                          <th>Count</th>
+                          <th>Percentage</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {Object.entries(moodCounts)
+                          .sort(([,a], [,b]) => b - a)
+                          .map(([mood, count]) => (
+                            <tr key={mood}>
+                              <td className="flex items-center gap-2">
+                                <div 
+                                  className="w-4 h-4 rounded-full" 
+                                  style={{ backgroundColor: MOOD_COLORS[mood] || '#6B7280' }}
+                                ></div>
+                                {mood.charAt(0).toUpperCase() + mood.slice(1)}
+                              </td>
+                              <td>{count}</td>
+                              <td>{((count / totalDreams) * 100).toFixed(1)}%</td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {/* Tag Cloud */}
+              {Object.keys(tagCounts).length > 0 && (
+                <div>
+                  <h2 className="text-2xl font-semibold mb-4">Tag Cloud</h2>
+                  <div className="bg-base-200 p-6 rounded-lg">
+                    <div className="flex flex-wrap gap-2">
+                      {Object.entries(tagCounts)
+                        .sort(([,a], [,b]) => b - a)
+                        .slice(0, 20)
+                        .map(([tag, count]) => (
                           <div 
-                            className='bg-gradient-to-r from-green-500 to-emerald-600 h-3 rounded-full transition-all'
-                            style={{ width: `${(count / Math.max(...Object.values(moodCounts))) * 100}%` }}
-                          ></div>
-                        </div>
-                        <div className='w-8 text-sm font-medium text-slate-600'>{count}</div>
-                      </div>
-                    ))}
-                </div>
-              ) : (
-                <p className='text-slate-500 text-center py-8'>No mood data available</p>
-              )}
-            </div>
-
-            {/* Top Emotions */}
-            <div className='bg-white rounded-xl p-6 border border-slate-200 shadow-lg'>
-              <h3 className='text-xl font-semibold mb-4 text-slate-800'>Most Common Emotions</h3>
-              {topEmotions.length > 0 ? (
-                <div className='space-y-3'>
-                  {topEmotions.map(([emotion, count]) => (
-                    <div key={emotion} className='flex items-center justify-between p-3 bg-gradient-to-r from-pink-50 to-rose-50 rounded-lg border border-pink-200'>
-                      <span className='font-medium text-slate-700'>{emotion}</span>
-                      <span className='bg-pink-100 text-pink-800 px-2 py-1 rounded-full text-sm font-medium'>{count}</span>
+                            key={tag} 
+                            className="badge badge-primary gap-2"
+                            style={{ 
+                              fontSize: `${Math.min(1.2, 0.8 + (count / Math.max(...Object.values(tagCounts))) * 0.4)}rem`
+                            }}
+                          >
+                            {tag} <span className="badge badge-ghost badge-sm">{count}</span>
+                          </div>
+                        ))}
                     </div>
-                  ))}
+                  </div>
                 </div>
-              ) : (
-                <p className='text-slate-500 text-center py-8'>No emotion data available</p>
               )}
             </div>
-
-            {/* Top Colors */}
-            <div className='bg-white rounded-xl p-6 border border-slate-200 shadow-lg'>
-              <h3 className='text-xl font-semibold mb-4 text-slate-800'>Most Common Colors</h3>
-              {topColors.length > 0 ? (
-                <div className='space-y-3'>
-                  {topColors.map(([color, count]) => (
-                    <div key={color} className='flex items-center justify-between p-3 bg-gradient-to-r from-indigo-50 to-blue-50 rounded-lg border border-indigo-200'>
-                      <span className='font-medium text-slate-700'>{color}</span>
-                      <span className='bg-indigo-100 text-indigo-800 px-2 py-1 rounded-full text-sm font-medium'>{count}</span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className='text-slate-500 text-center py-8'>No color data available</p>
-              )}
-            </div>
-
-            {/* Top Places */}
-            <div className='bg-white rounded-xl p-6 border border-slate-200 shadow-lg lg:col-span-2'>
-              <h3 className='text-xl font-semibold mb-4 text-slate-800'>Most Common Places</h3>
-              {topPlaces.length > 0 ? (
-                <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3'>
-                  {topPlaces.map(([place, count]) => (
-                    <div key={place} className='flex items-center justify-between p-3 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-lg border border-emerald-200'>
-                      <span className='font-medium text-slate-700 truncate'>{place}</span>
-                      <span className='bg-emerald-100 text-emerald-800 px-2 py-1 rounded-full text-sm font-medium ml-2'>{count}</span>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className='text-slate-500 text-center py-8'>No place data available</p>
-              )}
-            </div>
-          </div>
-        </div>
+          </>
+        )}
       </div>
     </Layout>
-  )
+  );
 } 

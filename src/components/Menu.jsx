@@ -1,76 +1,63 @@
-import { Link } from 'react-router-dom'
-import { useAuth0 } from '@auth0/auth0-react'
-
+import { useFirebaseAuth } from '../contexts/FirebaseAuthContext'
 import SelectorTheme from './SelectorTheme'
-import { useBackendUser } from '../hooks/useUsers.jsx'
 
-export default function Menu () {
-  const { isAuthenticated, loginWithRedirect } = useAuth0()
-  const { backendUser } = useBackendUser()
+export default function Menu() {
+  const { isAuthenticated, loginWithGoogle, user } = useFirebaseAuth()
 
   return (
-    <div className='navbar bg-base-100'>
-      <div className='flex-1'>
-        <Link to='/'>DreamSpeak</Link>
-      </div>
-      <div className='flex-none gap-2'>
-        <ul className='menu menu-horizontal px-1'>
-          <li>
-            <Link to='/all-dreams'>All Dreams</Link>
-          </li>
-          {isAuthenticated && (
-            <>
-              <li>
-                <Link to='/my-dreams'>My Dreams</Link>
-              </li>
-              <li>
-                <Link to='/reflections'>Reflections</Link>
-              </li>
-            </>
-          )}
-        </ul>
-        {isAuthenticated ? (
-          <div className='dropdown dropdown-end'>
-            <div
-              tabIndex={0}
-              role='button'
-              className='btn btn-ghost btn-circle avatar'
-            >
-              <div className='w-10 rounded-full'>
-                {backendUser === null ? (
-                  <span className='loading loading-spinner loading-md'></span>
-                ) : (
-                  <img
-                    alt='User Avatar'
-                    src={backendUser.picture || '/default-avatar.png'}
-                    onError={e => { e.target.onerror = null; e.target.src = '/default-avatar.png'; }}
-                  />
-                )}
-              </div>
-            </div>
-            <ul
-              tabIndex={0}
-              className='menu menu-vertical align-center dropdown-content bg-base-100 rounded-box z-[1] mt-3 p-2 shadow flex justify-center'
-            >
-              <li className='flex justify-center'>
-                <Link to='/user'>Profile</Link>
-              </li>
-              <li className='flex justify-center'>
-                <Link to='/logout'>Logout</Link>
-              </li>
-              <span className='flex justify-center'>
-                <SelectorTheme />
-              </span>
-            </ul>
+    <div className="navbar bg-base-100">
+      <div className="navbar-start">
+        <div className="dropdown">
+          <div tabIndex={0} role="button" className="btn btn-ghost lg:hidden">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h8m-8 6h16" />
+            </svg>
           </div>
-        ) : (
-          <button
-            onClick={() => loginWithRedirect()}
-            className='btn btn-primary'
-          >
-            Log In
-          </button>
-        )}
+          <ul tabIndex={0} className="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
+            <li><a href="/">Home</a></li>
+            <li><a href="/my-dreams">My Dreams</a></li>
+            <li><a href="/explore">Explore</a></li>
+            <li><a href="/reflections">Reflections</a></li>
+            <li><a href="/connections">Connections</a></li>
+            <li><a href="/settings">Settings</a></li>
+          </ul>
+        </div>
+        <a href="/" className="btn btn-ghost text-xl">Dream Speak</a>
+      </div>
+      <div className="navbar-center hidden lg:flex">
+        <ul className="menu menu-horizontal px-1">
+          <li><a href="/">Home</a></li>
+          <li><a href="/my-dreams">My Dreams</a></li>
+          <li><a href="/explore">Explore</a></li>
+          <li><a href="/reflections">Reflections</a></li>
+          <li><a href="/connections">Connections</a></li>
+          <li><a href="/settings">Settings</a></li>
+        </ul>
+      </div>
+      <div className="navbar-end">
+        <div className="flex items-center gap-2">
+          <SelectorTheme />
+          {!isAuthenticated ? (
+            <button className="btn btn-primary" onClick={loginWithGoogle}>
+              Sign In
+            </button>
+          ) : (
+            <div className="dropdown dropdown-end">
+              <div tabIndex={0} role="button" className="btn btn-ghost btn-circle avatar">
+                <div className="w-10 rounded-full">
+                  <img 
+                    alt="Profile" 
+                    src={user?.photoURL || '/default-avatar.png'}
+                  />
+                </div>
+              </div>
+              <ul tabIndex={0} className="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
+                <li><a href="/settings">Profile</a></li>
+                <li><a href="/logout">Logout</a></li>
+              </ul>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

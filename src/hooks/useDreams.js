@@ -1,164 +1,126 @@
-import { useState, useEffect, useCallback } from 'react'
-import { useAuth0 } from '@auth0/auth0-react'
-import useApi from './useApi'
+import { useState, useEffect } from 'react';
+import { useFirebaseAuth } from '../contexts/FirebaseAuthContext';
+import { getDreams, getMyDreams, createDream, updateDream, deleteDream } from '../services/firebaseService';
 
-const GET_USER_DREAMS = `
-  query GetUserDreams {
-    dreams {
-      id
-      title
-      date
-      description
-      image
-      isPublic
-      tags
-      user {
-        id
-      }
+export default function useDreams() {
+  const { user, isAuthenticated } = useFirebaseAuth();
+  const [dreams, setDreams] = useState([]);
+  const [myDreams, setMyDreams] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  // Fetch all public dreams
+  const fetchAllDreams = async () => {
+    try {
+      setLoading(true);
+      const allDreams = await getDreams();
+      // Filter for public dreams only
+      const publicDreams = allDreams.filter(dream => dream.isPublic);
+      setDreams(publicDreams);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching dreams:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
-  }
-`
+  };
 
-const ADD_DREAM_MUTATION = `
-  mutation AddDream($title: String!, $date: String!, $description: String!, $tags: [String!]!, $isPublic: Boolean!, $image: String, $mood: String, $emotions: [String], $colors: [String], $role: Boolean, $people: [String], $places: [String], $things: [String]) {
-    addDream(
-      title: $title, 
-      date: $date, 
-      description: $description, 
-      tags: $tags, 
-      isPublic: $isPublic, 
-      image: $image, 
-      mood: $mood, 
-      emotions: $emotions, 
-      colors: $colors, 
-      role: $role, 
-      people: $people, 
-      places: $places, 
-      things: $things
-    ) {
-      id
-      title
-      date
-      description
-      tags
-      isPublic
-      image
-      mood
-      emotions
-      colors
-      role
-      people
-      places
-      things
+  // Fetch user's own dreams
+  const fetchMyDreams = async () => {
+    if (!isAuthenticated || !user) {
+      setMyDreams([]);
+      return;
     }
-  }
-`
 
-const UPDATE_DREAM_MUTATION = `
-  mutation UpdateDream($id: ID!, $title: String!, $description: String!, $mood: String, $emotions: [String], $colors: [String], $role: Boolean, $people: [String], $places: [String], $things: [String]) {
-    updateDream(
-      id: $id,
-      title: $title,
-      description: $description,
-      mood: $mood,
-      emotions: $emotions,
-      colors: $colors,
-      role: $role,
-      people: $people,
-      places: $places,
-      things: $things
-    ) {
-      id
-      title
-      date
-      description
-      tags
-      isPublic
-      image
-      mood
-      emotions
-      colors
-      role
-      people
-      places
-      things
+    try {
+      setLoading(true);
+      const userDreams = await getMyDreams();
+      setMyDreams(userDreams);
+      setError(null);
+    } catch (err) {
+      console.error('Error fetching my dreams:', err);
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
-  }
-`
+  };
 
-const DELETE_DREAM_MUTATION = `
-  mutation DeleteDream($dreamId: ID!) {
-    deleteDream(dreamId: $dreamId)
-  }
-`
-
-
-export default function useDreams () {
-  const { user } = useAuth0()
-  const { apiCall, loading, error } = useApi()
-  const [dreams, setDreams] = useState([])
-
-  const fetchDreams = useCallback(async () => {
-    const data = await apiCall(GET_USER_DREAMS)
-    if (data) {
-      setDreams(data.dreams)
+  // Create a new dream
+  const addDream = async (dreamData) => {
+    try {
+      const newDream = await createDream(dreamData);
+      
+      // Update local state
+      if (dreamData.isPublic) {
+        setDreams(prev => [newDream, ...prev]);
+      }
+      setMyDreams(prev => [newDream, ...prev]);
+      
+      return newDream;
+    } catch (err) {
+      console.error('Error creating dream:', err);
+      throw err;
     }
-  }, [apiCall])
+  };
 
-  const addDream = useCallback(
-    async newDream => {
-      if (!user) {
-        console.error('User not authenticated or user object missing')
-        return
-      }
+  // Update an existing dream
+  const editDream = async (dreamId, dreamData) => {
+    try {
+      const updatedDream = await updateDream(dreamId, dreamData);
+      
+      // Update local state
+      setDreams(prev => prev.map(dream => 
+        dream.id === dreamId ? updatedDream : dream
+      ));
+      setMyDreams(prev => prev.map(dream => 
+        dream.id === dreamId ? updatedDream : dream
+      ));
+      
+      return updatedDream;
+    } catch (err) {
+      console.error('Error updating dream:', err);
+      throw err;
+    }
+  };
 
-      try {
-        const data = await apiCall(ADD_DREAM_MUTATION, newDream)
-        if (data) {
-          setDreams(prevDreams => [...prevDreams, data.addDream])
-          fetchDreams() // Fetch dreams after adding a new one
-        }
-      } catch (err) {
-        console.error('Error in addDream:', err)
-      }
-    },
-    [apiCall, fetchDreams, user]
-  )
+  // Delete a dream
+  const removeDream = async (dreamId) => {
+    try {
+      await deleteDream(dreamId);
+      
+      // Update local state
+      setDreams(prev => prev.filter(dream => dream.id !== dreamId));
+      setMyDreams(prev => prev.filter(dream => dream.id !== dreamId));
+    } catch (err) {
+      console.error('Error deleting dream:', err);
+      throw err;
+    }
+  };
 
-  const updateDream = useCallback(
-    async (dreamId, updatedData) => {
-      const data = await apiCall(UPDATE_DREAM_MUTATION, {
-        id: dreamId,
-        ...updatedData
-      })
-      if (data) {
-        // Update the dream in the local state
-        setDreams(prevDreams => 
-          prevDreams.map(dream => 
-            dream.id === dreamId ? data.updateDream : dream
-          )
-        )
-      }
-    },
-    [apiCall]
-  )
-
-  const deleteDream = useCallback(
-    async (dreamId) => {
-      const data = await apiCall(DELETE_DREAM_MUTATION, { dreamId })
-      if (data && data.deleteDream) {
-        // Remove the dream from the local state
-        setDreams(prevDreams => 
-          prevDreams.filter(dream => dream.id !== dreamId)
-        )
-      }
-    },
-    [apiCall]
-  )
-
+  // Fetch dreams on component mount
   useEffect(() => {
-    fetchDreams()
-  }, [fetchDreams])
+    fetchAllDreams();
+  }, []);
 
-  return { dreams, loading, error, addDream, updateDream, deleteDream, fetchDreams }
+  // Fetch user's dreams when authentication state changes
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchMyDreams();
+    } else {
+      setMyDreams([]);
+    }
+  }, [isAuthenticated, user]);
+
+  return {
+    dreams,
+    myDreams,
+    loading,
+    error,
+    addDream,
+    editDream,
+    removeDream,
+    refetchDreams: fetchAllDreams,
+    refetchMyDreams: fetchMyDreams
+  };
 }

@@ -1,95 +1,179 @@
-import { useState, useEffect } from 'react';
-import { useAuth0 } from '@auth0/auth0-react';
-import { useBackendUser } from '../../hooks/useUsers.jsx';
-import { useNavigate } from 'react-router-dom';
-import Layout from '../../components/Layout';
-import { getApiUrl } from '../../utils';
+import { useState, useEffect } from 'react'
+import { useFirebaseAuth } from '../../contexts/FirebaseAuthContext'
+import Layout from '../../components/Layout'
+import { createUser } from '../../services/firebaseService'
 
 export default function Signup() {
-  const { getIdTokenClaims } = useAuth0();
-  const { backendUser, refreshBackendUser } = useBackendUser();
-  const [form, setForm] = useState({
+  const { user, loading } = useFirebaseAuth()
+  const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
     picture: ''
-  });
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
-  const navigate = useNavigate();
+  })
+  const [saveLoading, setSaveLoading] = useState(false)
+  const [error, setError] = useState(null)
 
+  // Auto-populate form with user data
   useEffect(() => {
-    if (backendUser) {
-      setForm({
-        firstName: backendUser.firstName || '',
-        lastName: backendUser.lastName || '',
-        picture: backendUser.picture || ''
-      });
+    if (user) {
+      setFormData({
+        firstName: user.displayName?.split(' ')[0] || '',
+        lastName: user.displayName?.split(' ').slice(1).join(' ') || '',
+        picture: user.photoURL || ''
+      })
     }
-  }, [backendUser]);
-
-  const handleChange = (field, value) => {
-    setForm(prev => ({ ...prev, [field]: value }));
-  };
+  }, [user])
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    setError(null);
-    try {
-      const token = await getIdTokenClaims();
-      const response = await fetch(getApiUrl(), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token.__raw}`
-        },
-        body: JSON.stringify({
-          query: `
-            mutation UpdateUser($firstName: String, $lastName: String, $picture: String) {
-              updateUser(firstName: $firstName, lastName: $lastName, picture: $picture) {
-                id
-                firstName
-                lastName
-                picture
-                email
-              }
-            }
-          `,
-          variables: form
-        })
-      });
-      const data = await response.json();
-      if (data.errors) throw new Error(data.errors[0].message);
-      await refreshBackendUser();
-      navigate('/home');
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
+    e.preventDefault()
+    
+    if (!user) {
+      setError('Please sign in first')
+      return
     }
-  };
+
+    try {
+      setSaveLoading(true)
+      setError(null)
+      
+      await createUser({
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        picture: formData.picture
+      })
+
+      // Redirect to settings after successful signup
+      window.location.href = '/settings'
+    } catch (err) {
+      console.error('Error creating user profile:', err)
+      setError(err.message)
+    } finally {
+      setSaveLoading(false)
+    }
+  }
+
+  const handleInputChange = (field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }))
+  }
+
+  if (loading) {
+    return (
+      <Layout>
+        <div className="flex justify-center items-center min-h-screen">
+          <span className="loading loading-spinner loading-lg"></span>
+        </div>
+      </Layout>
+    )
+  }
+
+  if (!user) {
+    return (
+      <Layout>
+        <div className="flex justify-center items-center min-h-screen">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold mb-4">Please Sign In</h2>
+            <p className="text-base-content/70 mb-4">You need to sign in to complete your profile</p>
+            <a href="/" className="btn btn-primary">Go to Home</a>
+          </div>
+        </div>
+      </Layout>
+    )
+  }
 
   return (
     <Layout>
-      <div className='flex flex-col items-center justify-start h-screen'>
-        <h1 className='text-4xl font-bold text-center py-6'>Complete Your Profile</h1>
-        <form className='max-w-lg w-full space-y-6' onSubmit={handleSubmit}>
-          <div>
-            <label className='label'>First Name</label>
-            <input type='text' className='input input-bordered w-full' value={form.firstName} onChange={e => handleChange('firstName', e.target.value)} required />
+      <div className='flex flex-col items-center justify-start min-h-screen p-6'>
+        <div className='w-full max-w-2xl'>
+          <div className='text-center mb-8'>
+            <h1 className='text-4xl font-bold mb-4'>Complete Your Profile</h1>
+            <p className='text-lg text-base-content/70'>
+              Tell us a bit about yourself to get started with Dream Speak
+            </p>
           </div>
-          <div>
-            <label className='label'>Last Name</label>
-            <input type='text' className='input input-bordered w-full' value={form.lastName} onChange={e => handleChange('lastName', e.target.value)} required />
+
+          <div className='card bg-base-100 shadow-xl'>
+            <div className='card-body'>
+              <form onSubmit={handleSubmit} className='space-y-6'>
+                {error && (
+                  <div className='alert alert-error'>
+                    <span>{error}</span>
+                  </div>
+                )}
+
+                <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                  <div>
+                    <label className='label'>
+                      <span className='label-text font-semibold'>First Name</span>
+                    </label>
+                    <input
+                      type='text'
+                      className='input input-bordered w-full'
+                      value={formData.firstName}
+                      onChange={(e) => handleInputChange('firstName', e.target.value)}
+                      placeholder='Enter your first name'
+                      required
+                    />
+                  </div>
+
+                  <div>
+                    <label className='label'>
+                      <span className='label-text font-semibold'>Last Name</span>
+                    </label>
+                    <input
+                      type='text'
+                      className='input input-bordered w-full'
+                      value={formData.lastName}
+                      onChange={(e) => handleInputChange('lastName', e.target.value)}
+                      placeholder='Enter your last name'
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className='label'>
+                    <span className='label-text font-semibold'>Profile Picture URL</span>
+                  </label>
+                  <input
+                    type='url'
+                    className='input input-bordered w-full'
+                    value={formData.picture}
+                    onChange={(e) => handleInputChange('picture', e.target.value)}
+                    placeholder='https://example.com/image.jpg'
+                  />
+                  <label className='label'>
+                    <span className='label-text-alt'>Optional: Add a URL to your profile picture</span>
+                  </label>
+                </div>
+
+                <div className='flex justify-end space-x-4 pt-4'>
+                  <button
+                    type='button'
+                    className='btn btn-outline'
+                    onClick={() => window.location.href = '/settings'}
+                  >
+                    Skip for Now
+                  </button>
+                  <button
+                    type='submit'
+                    className='btn btn-primary'
+                    disabled={saveLoading}
+                  >
+                    {saveLoading ? (
+                      <span className='loading loading-spinner loading-sm'></span>
+                    ) : (
+                      'Complete Profile'
+                    )}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
-          <div>
-            <label className='label'>Profile Picture URL</label>
-            <input type='url' className='input input-bordered w-full' value={form.picture} onChange={e => handleChange('picture', e.target.value)} placeholder='https://example.com/image.jpg' />
-          </div>
-          {error && <div className='alert alert-error'>{error}</div>}
-          <button type='submit' className='btn btn-primary w-full' disabled={loading}>{loading ? 'Saving...' : 'Save & Continue'}</button>
-        </form>
+        </div>
       </div>
     </Layout>
-  );
+  )
 } 
