@@ -1,92 +1,210 @@
-# DreamSpeak
+# DreamSpeak 🌙✨
 
-## Overview
+A beautiful, modern web application for sharing and exploring dreams with a supportive community.
 
-DreamSpeak is a web application built with React and Vite, designed to help users manage and share their dreams. The application uses Auth0 for authentication and Prisma with a PostgreSQL database for data management.
+## 🚀 Live Demo
 
-## Features
+- **Production Site**: [https://dream-speak.web.app](https://dream-speak.web.app)
+- **GitHub Repository**: [https://github.com/berningb/dream-speak.git](https://github.com/berningb/dream-speak.git)
 
-- User authentication with Auth0
-- Manage personal dreams
-- View all public dreams
-- Theme selection with DaisyUI and TailwindCSS
+## ✨ Features
 
-## Installation
+### 🔐 Authentication & Privacy
 
-1. Clone the repository:
+- **Google Sign-In**: Seamless authentication with Firebase Auth
+- **Privacy Settings**: Control who can see, like, comment, and favorite your dreams
+- **Anonymous Mode**: Post dreams anonymously while maintaining privacy control
 
-   ```sh
-   git clone https://github.com/your-username/dream-speak.git
+### 📝 Dream Management
+
+- **Create Dreams**: Rich dream logging with titles, content, moods, and tags
+- **Edit Dreams**: Update your dreams anytime with full editing capabilities
+- **Dream Gallery**: Beautiful card-based display of all your dreams
+- **Image Support**: Add images to enhance your dream descriptions
+
+### 🌍 Community Features
+
+- **Explore Dreams**: Discover dreams from the community
+- **Interactive Comments**: Full comment system with edit and delete functionality
+- **Likes & Favorites**: Express appreciation and save dreams for later
+- **Real-time Updates**: Live updates when others interact with your dreams
+
+### 📊 Analytics & Insights
+
+- **Dream Analytics**: Visualize your dream patterns and moods over time
+- **Favorites Management**: Organized view of all your favorited dreams
+- **Personal Notes**: Add private notes to your dreams for reflection
+
+### 🎨 User Experience
+
+- **Modern UI**: Built with DaisyUI and TailwindCSS for a beautiful interface
+- **Dark/Light Themes**: Multiple theme options for comfortable viewing
+- **Responsive Design**: Works perfectly on desktop, tablet, and mobile
+- **Fast Performance**: Optimized with Vite for lightning-fast loading
+
+## 🛠️ Tech Stack
+
+- **Frontend**: React 18 + Vite
+- **Styling**: TailwindCSS + DaisyUI
+- **Backend**: Firebase (Firestore, Auth, Hosting)
+- **Icons**: React Icons + Custom SVG icons
+- **Charts**: Recharts for analytics visualization
+- **Routing**: React Router DOM
+
+## 🚀 Getting Started
+
+### Prerequisites
+
+- Node.js 20+ (LTS recommended)
+- npm or yarn
+- Firebase account
+
+### Installation
+
+1. **Clone the repository**:
+
+   ```bash
+   git clone https://github.com/berningb/dream-speak.git
    cd dream-speak
    ```
 
-2. Install the dependencies:
+2. **Install dependencies**:
 
-   ```sh
+   ```bash
    npm install
    ```
 
-3. Set up environment variables:
-   Create a `.env` file in the root directory and add the following variables:
+3. **Set up Firebase**:
 
-   ```env
-   VITE_CLIENT_DOMAIN=dev-wrmepf3pb43nrndk.us.auth0.com
-   VITE_CLIENT_ID=OwOconAGdjngYK6TgUg3nkZUPETGoTD0
-   VITE_AUDIENCE=https://dev-wrmepf3pb43nrndk.us.auth0.com/api/v2/
+   - Create a Firebase project at [https://console.firebase.google.com](https://console.firebase.google.com)
+   - Enable Authentication (Google provider)
+   - Enable Firestore Database
+   - Enable Hosting
+   - Copy your Firebase config to `src/firebase.js`
 
-   **Test Credentials:**
-   - Email: `test@test.com`
-   - Password: `Test123!`
+4. **Start development server**:
+
+   ```bash
+   npm run dev
    ```
 
-   **Auth0 Dashboard**: https://dev-wrmepf3pb43nrndk.us.auth0.com
+   The app will open at `https://localhost:3000`
 
-4. Start the development servers:
+## 📁 Project Structure
 
-   ```sh
-   bash start-dev.sh
-   ```
+```
+dream-speak/
+├── src/
+│   ├── components/          # Reusable UI components
+│   │   ├── AddDreamModal.jsx
+│   │   ├── EditDreamModal.jsx
+│   │   ├── DreamCard.jsx
+│   │   ├── Comments.jsx
+│   │   ├── Layout.jsx
+│   │   ├── Menu.jsx
+│   │   └── PrivacySettings.jsx
+│   ├── contexts/           # React contexts
+│   │   └── FirebaseAuthContext.jsx
+│   ├── hooks/              # Custom React hooks
+│   │   ├── useApi.js
+│   │   ├── useDreams.js
+│   │   ├── useFavorites.js
+│   │   └── useUsers.jsx
+│   ├── pages/              # Main application pages
+│   │   ├── Home/
+│   │   ├── Explore/
+│   │   ├── Dream/
+│   │   ├── MyDreams/
+│   │   ├── Reflections/
+│   │   ├── Connections/
+│   │   └── Settings/
+│   ├── services/           # External service integrations
+│   │   └── firebaseService.js
+│   ├── firebase.js         # Firebase configuration
+│   ├── utils.js           # Utility functions
+│   └── main.jsx           # Application entry point
+├── public/                 # Static assets
+├── dist/                  # Build output
+└── firebase.json          # Firebase hosting config
+```
 
-   **Note**: Both frontend and backend run on HTTPS with self-signed certificates. You'll need to accept the certificate warnings in your browser for both:
+## 🚀 Deployment
 
-   - Frontend: `https://localhost:3000`
-   - Backend: `https://localhost:4000`
+### Build for Production
 
-## Project Structure
+```bash
+npm run build
+```
 
-- **Frontend**: Located in the `dream-speak` directory
+### Deploy to Firebase Hosting
 
-  - **Main entry point**: `src/main.jsx` (startLine: 1, endLine: 28)
-  - **Components**: `src/components`
-  - **Pages**: `src/pages`
-  - **Hooks**: `src/hooks`
-  - **Styles**: `src/index.css` (startLine: 1, endLine: 3)
-  - **Configuration**: `vite.config.js` (startLine: 1, endLine: 13), `tailwind.config.js` (startLine: 1, endLine: 16), `postcss.config.js` (startLine: 1, endLine: 6), `eslint.config.js` (startLine: 1, endLine: 38)
+```bash
+# Install Firebase CLI (if not already installed)
+npm install -g firebase-tools
 
-- **Backend**: Located in the `dream-server` directory
-  - **Main entry point**: `yogaServer.js` (startLine: 1, endLine: 313)
-  - **Prisma schema**: `prisma/schema.prisma` (startLine: 1, endLine: 31)
-  - **Migrations**: `prisma/migrations`
+# Login to Firebase
+firebase login
 
-## Scripts
+# Deploy
+firebase deploy --only hosting
+```
 
-- **Development**: `npm run dev` (startLine: 6, endLine: 10 in `taking-note/package.json`)
-- **Build**: `npm run build`
-- **Lint**: `npm run lint`
-- **Preview**: `npm run preview`
+## 📝 Scripts
 
-## GraphQL API
+- `npm run dev` - Start development server
+- `npm run build` - Build for production
+- `npm run preview` - Preview production build locally
+- `npm run lint` - Run ESLint
+- `npm test` - Run tests
+- `npm run test:ui` - Run tests with UI
 
-The backend uses GraphQL Yoga to provide a GraphQL API. The schema and resolvers are defined in `yogaServer.js` (startLine: 82, endLine: 265).
+## 🎨 Themes
 
-## Authentication
+DreamSpeak supports multiple themes powered by DaisyUI:
 
-Authentication is handled using Auth0. The Auth0Provider is set up in `src/main.jsx` (startLine: 12, endLine: 26).
+- Light, Dark, Cupcake, Emerald, and many more
+- Theme selection persists across sessions
+- Automatic system theme detection
 
-## Themes
+## 🔒 Privacy Features
 
-Themes are managed using DaisyUI and can be selected using the `SelectorTheme` component. The available themes are defined in `src/utils.js` (startLine: 1, endLine: 31).
+DreamSpeak puts privacy first:
 
-## License
+- **Dream Visibility**: Choose who can see your dreams (everyone, friends, or private)
+- **Interaction Controls**: Control who can like, comment, and favorite your dreams
+- **Anonymous Mode**: Post dreams without revealing your identity
+- **Data Ownership**: Full control over your dream data
 
-This project is licensed under the MIT License.
+## 🐛 Recent Updates
+
+### v2.0.0 - Comments System Overhaul
+
+- ✅ **Edit Comments**: Users can now edit their own comments inline
+- ✅ **Delete Comments**: Full deletion functionality with proper permissions
+- ✅ **Visual Indicators**: Shows "(edited)" for modified comments
+- ✅ **Permission System**: Smart permissions (users edit own, owners moderate all)
+- ✅ **UI Improvements**: Beautiful edit/delete icons with hover states
+- ✅ **Keyboard Shortcuts**: Enter to save, Escape to cancel editing
+
+## 🤝 Contributing
+
+1. Fork the repository
+2. Create a feature branch: `git checkout -b feature/amazing-feature`
+3. Commit your changes: `git commit -m 'Add amazing feature'`
+4. Push to the branch: `git push origin feature/amazing-feature`
+5. Open a Pull Request
+
+## 📄 License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
+
+## 🙏 Acknowledgments
+
+- Built with ❤️ using React and Firebase
+- UI components powered by DaisyUI
+- Icons from React Icons
+- Charts by Recharts
+
+---
+
+**Sweet Dreams! 🌙** Start sharing your dreams at [dream-speak.web.app](https://dream-speak.web.app)
