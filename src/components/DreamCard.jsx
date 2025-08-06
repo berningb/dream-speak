@@ -58,13 +58,22 @@ export default function DreamCard({ dream, showAuthor = true, onClick, showFavor
         <h3 className='text-lg font-semibold line-clamp-2'>{dream.title}</h3>
       </div>
       
-      {dream.image && (
-        <img 
-          src={dream.image} 
-          alt={dream.title}
-          className='w-full h-64 object-cover rounded-lg mb-3'
-        />
-      )}
+      <div className='w-full h-64 mb-3 rounded-lg overflow-hidden bg-gradient-to-br from-indigo-200 via-purple-200 to-pink-200 dark:from-indigo-800 dark:via-purple-800 dark:to-pink-800'>
+        {dream.image ? (
+          <img 
+            src={dream.image} 
+            alt={dream.title}
+            className='w-full h-full object-cover'
+          />
+        ) : (
+          <div className='w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-100 via-purple-100 to-pink-100 dark:from-indigo-900 dark:via-purple-900 dark:to-pink-900'>
+            <div className='text-center text-base-content/30'>
+              <div className='text-6xl mb-2'>🌙</div>
+              <div className='text-sm font-medium'>Dream Image</div>
+            </div>
+          </div>
+        )}
+      </div>
       
       {/* Instagram-style action buttons */}
       <div className='flex items-center gap-4 mb-3'>

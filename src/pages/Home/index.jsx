@@ -8,9 +8,19 @@ export default function Home() {
     <Layout>
       <div className='flex flex-col items-center justify-center min-h-screen p-6'>
         <div className='text-center max-w-4xl'>
-          <h1 className='text-6xl font-bold mb-8'>Dream Speak</h1>
-          <p className='text-xl mb-8'>
-            Share your dreams, connect with others, and explore the world of dreams together.
+          <div className='flex items-center justify-center mb-6'>
+            <span className='text-8xl mr-4'>🌙</span>
+            <h1 className='text-6xl font-bold'>DreamSpeak</h1>
+          </div>
+          <p className='text-2xl mb-4 text-primary font-medium'>
+            Where dreams come alive through shared stories
+          </p>
+          <p className='text-lg mb-8 text-base-content/80 max-w-2xl mx-auto'>
+            A safe space to explore your subconscious, connect with fellow dreamers, and discover the hidden meanings 
+            in your nightly adventures. Every dream has a story worth sharing.
+          </p>
+          <p className='text-sm mb-8 text-base-content/60 italic'>
+            ✨ Sweet dreams await - start sharing your journey tonight ✨
           </p>
           
           {!isAuthenticated ? (
@@ -19,19 +29,19 @@ export default function Home() {
                 className='btn btn-primary btn-lg'
                 onClick={loginWithGoogle}
               >
-                Get Started
+                🌟 Begin Your Dream Journey
               </button>
               <p className='text-base-content/70'>
-                Sign in to start sharing your dreams
+                Join our community of dreamers and start sharing your stories
               </p>
             </div>
           ) : (
             <div className='flex flex-col sm:flex-row gap-8 justify-center items-center'>
               <a href='/my-dreams' className='btn btn-primary btn-lg'>
-                View My Dreams
+                📖 My Dream Journal
               </a>
               <a href='/explore' className='btn btn-outline btn-lg'>
-                Explore Dreams
+                🔍 Discover Dreams
               </a>
             </div>
           )}

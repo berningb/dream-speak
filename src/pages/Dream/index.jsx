@@ -272,13 +272,22 @@ export default function Dream() {
                 </div>
               </div>
 
-              {dream.image && (
-                <img 
-                  src={dream.image} 
-                  alt={dream.title}
-                  className='w-full h-64 object-cover rounded-lg mb-6'
-                />
-              )}
+              <div className='w-full h-64 mb-6 rounded-lg overflow-hidden'>
+                {dream.image ? (
+                  <img 
+                    src={dream.image} 
+                    alt={dream.title}
+                    className='w-full h-full object-cover'
+                  />
+                ) : (
+                  <div className='w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-100 via-purple-100 to-pink-100 dark:from-indigo-900 dark:via-purple-900 dark:to-pink-900'>
+                    <div className='text-center text-base-content/30'>
+                      <div className='text-8xl mb-4'>🌙</div>
+                      <div className='text-lg font-medium'>Sweet Dreams</div>
+                    </div>
+                  </div>
+                )}
+              </div>
 
               <div className='prose max-w-none mb-6'>
                 <p className='text-lg leading-relaxed'>{dream.content}</p>

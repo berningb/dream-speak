@@ -22,7 +22,10 @@ export default function Menu() {
             <li><a href="/settings">Settings</a></li>
           </ul>
         </div>
-        <a href="/" className="btn btn-ghost text-xl">Dream Speak</a>
+        <a href="/" className="btn btn-ghost text-xl">
+          <span className="text-2xl">🌙</span>
+          <span className="ml-2">DreamSpeak</span>
+        </a>
       </div>
       <div className="navbar-center hidden lg:flex">
         <ul className="menu menu-horizontal px-1">
