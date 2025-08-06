@@ -17,6 +17,25 @@ import {
   AreaChart
 } from 'recharts';
 
+// Custom tooltip component
+const CustomTooltip = ({ active, payload, label }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div style={{
+        backgroundColor: 'transparent',
+        border: 'none',
+        boxShadow: 'none',
+        padding: '8px',
+        color: 'inherit'
+      }}>
+        <p style={{ fontWeight: 'bold', margin: '0 0 4px 0' }}>{label}</p>
+        <p style={{ margin: 0, opacity: 0.7 }}>Count: {payload[0].value}</p>
+      </div>
+    );
+  }
+  return null;
+};
+
 // Custom colors for charts
 const MOOD_COLORS = {
   happy: '#10B981',
@@ -278,6 +297,15 @@ export default function Analytics() {
                           outerRadius={80}
                           fill="#8884d8"
                           dataKey="value"
+                          onMouseEnter={(data, index, e) => {
+                            e.target.style.cursor = 'pointer';
+                            e.target.style.transform = 'scale(1.05)';
+                            e.target.style.transformOrigin = 'center';
+                          }}
+                          onMouseLeave={(data, index, e) => {
+                            e.target.style.cursor = 'default';
+                            e.target.style.transform = 'scale(1)';
+                          }}
                         >
                           {moodChartData.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={entry.color} />
@@ -306,6 +334,15 @@ export default function Analytics() {
                           outerRadius={80}
                           fill="#8884d8"
                           dataKey="value"
+                          onMouseEnter={(data, index, e) => {
+                            e.target.style.cursor = 'pointer';
+                            e.target.style.transform = 'scale(1.05)';
+                            e.target.style.transformOrigin = 'center';
+                          }}
+                          onMouseLeave={(data, index, e) => {
+                            e.target.style.cursor = 'default';
+                            e.target.style.transform = 'scale(1)';
+                          }}
                         >
                           {privacyData.map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={entry.color} />
@@ -329,8 +366,26 @@ export default function Analytics() {
                       <CartesianGrid strokeDasharray="3 3" />
                       <XAxis dataKey="tag" />
                       <YAxis />
-                      <Tooltip />
-                      <Bar dataKey="count" fill="#8884d8" />
+                      <Tooltip 
+                        content={<CustomTooltip />}
+                        cursor={false}
+                      />
+                      <Bar 
+                        dataKey="count" 
+                        fill="#8884d8" 
+                        radius={[4, 4, 0, 0]}
+                        onMouseEnter={(data, index, e) => {
+                          e.target.style.fill = '#6366f1';
+                          e.target.style.cursor = 'pointer';
+                          e.target.style.transform = 'scale(1.02)';
+                          e.target.style.transformOrigin = 'center';
+                        }}
+                        onMouseLeave={(data, index, e) => {
+                          e.target.style.fill = '#8884d8';
+                          e.target.style.cursor = 'default';
+                          e.target.style.transform = 'scale(1)';
+                        }}
+                      />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
