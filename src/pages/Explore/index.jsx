@@ -312,15 +312,9 @@ export default function Explore() {
         <div className='w-full max-w-7xl'>
           <div className='flex flex-col items-center mb-8'>
             <h1 className='text-4xl font-bold text-center mb-6'>Explore Dreams</h1>
-            {loadingStats && (
-              <div className="flex items-center gap-2 mb-4 text-sm text-base-content/70">
-                <span className="loading loading-spinner loading-sm"></span>
-                Loading like counts...
-              </div>
-            )}
             <button
               className='btn btn-primary btn-lg flex items-center gap-2'
-              onClick={() => document.getElementById('add_dream_modal').showModal()}
+              onClick={() => (window.location.href = '/new-dream')}
             >
               Share Your Dream
             </button>

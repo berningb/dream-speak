@@ -2,9 +2,13 @@ import moment from 'moment'
 
 // Theme initialization function
 export const initializeTheme = () => {
-  const savedTheme = localStorage.getItem('dream-speak-theme') || 'light';
-  document.documentElement.setAttribute('data-theme', savedTheme);
-  return savedTheme;
+  const savedTheme = localStorage.getItem('dream-speak-theme')
+  const themeToApply = savedTheme || 'aqua'
+  document.documentElement.setAttribute('data-theme', themeToApply)
+  if (!savedTheme) {
+    localStorage.setItem('dream-speak-theme', themeToApply)
+  }
+  return themeToApply
 };
 
 export const formatDreamDate = (dateString) => {

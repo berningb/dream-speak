@@ -40,6 +40,7 @@ export default function MyDreams () {
   const [selectedDreamId, setSelectedDreamId] = useState(null)
   const [dreamStats, setDreamStats] = useState({}) // { dreamId: { likeCount, isLiked, isFavorited } }
   const [loadingStats, setLoadingStats] = useState(false)
+  
 
   const fetchDreams = async () => {
     try {
@@ -253,29 +254,20 @@ export default function MyDreams () {
   if (loading) return <div>Loading...</div>
   if (error) return <div>Error: {error}</div>
 
-  const handleAddDream = async () => {
-    await fetchDreams() // Fetch dreams after adding a new one
-  }
+  // No inline add modal on this page; redirect to New Dream page instead
 
   return (
     <Layout>
-      <AddDreamModal onAddDream={handleAddDream} />
+      
       <div className='flex flex-col items-center justify-start min-h-screen p-6'>
         <div className='w-full max-w-7xl'>
           <div className='flex flex-col items-center mb-8'>
             <h1 className='text-4xl font-bold text-center mb-6'>My Dreams</h1>
-            {loadingStats && (
-              <div className="flex items-center gap-2 mb-4 text-sm text-base-content/70">
-                <span className="loading loading-spinner loading-sm"></span>
-                Loading like counts...
-              </div>
-            )}
             <button
               className='btn btn-primary btn-lg flex items-center gap-2'
-              onClick={() => document.getElementById('add_dream_modal').showModal()}
+              onClick={() => (window.location.href = '/new-dream')}
             >
-              <IoAdd />
-              Log New Dream
+              New Dream
             </button>
           </div>
 
@@ -291,7 +283,7 @@ export default function MyDreams () {
               <p className='text-lg mb-4'>No dreams found. Start by logging your first dream!</p>
               <button
                 className='btn btn-primary'
-                onClick={() => document.getElementById('add_dream_modal').showModal()}
+                onClick={() => (window.location.href = '/new-dream')}
               >
                 Log Your First Dream
               </button>

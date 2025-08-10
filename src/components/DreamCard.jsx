@@ -56,15 +56,44 @@ export default function DreamCard({ dream, showAuthor = true, onClick, showFavor
     }
   }
 
+  const dreamTypeRaw = (dream.type || 'sweet').toLowerCase()
+  const dreamType = dreamTypeRaw === 'normal' ? 'sweet' : dreamTypeRaw
+  const cardBase = 'bg-base-200 hover:bg-base-300'
+
+  // Base placeholder uses theme colors; we add a subtle dream-tinted overlay below
+  const placeholderBase = 'from-base-200 via-base-300 to-base-200'
+  const placeholderTint =
+    dreamType === 'lucid'
+      ? 'from-emerald-300/25 to-transparent'
+      : dreamType === 'nightmare'
+      ? 'from-fuchsia-300/25 to-transparent'
+      : 'from-sky-300/25 to-transparent'
+
+  const borderColor = 'border-primary/40'
+
+  const badgeClasses =
+    dreamType === 'lucid'
+      ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+      : dreamType === 'nightmare'
+      ? 'bg-violet-100 text-violet-800 border border-violet-300'
+      : 'bg-sky-100 text-sky-800 border border-sky-300'
+
+  const likeColorClass = 'text-primary'
+
   return (
     <div 
-      className={`bg-base-200 rounded-lg p-4 h-full flex flex-col relative ${onClick ? 'cursor-pointer hover:bg-base-300 transition-colors' : ''}`}
+      className={`rounded-lg p-4 h-full flex flex-col relative ${cardBase} border ${borderColor} ${onClick ? 'cursor-pointer transition-colors' : ''}`}
       onClick={handleClick}
     >
-      {/* Top bar with date and hamburger menu */}
-      <div className='flex justify-between items-start mb-3'>
-        <div className='text-sm text-base-content/50'>
-          {formatDreamDate(dream.createdAt || dream.date)}
+      {/* Top bar with type + date */}
+      <div className='flex justify-between items-start mb-3 relative z-10'>
+        <div className='flex items-center gap-2'>
+          <span className={`text-xs font-semibold px-2 py-1 rounded-md ${badgeClasses}`}>
+            {dreamType === 'sweet' ? 'Sweet' : dreamType.charAt(0).toUpperCase() + dreamType.slice(1)}
+          </span>
+          <div className='text-sm text-white/70'>
+            {formatDreamDate(dream.createdAt || dream.date)}
+          </div>
         </div>
         
         {/* Hamburger menu for edit/delete */}
@@ -100,12 +129,11 @@ export default function DreamCard({ dream, showAuthor = true, onClick, showFavor
           </div>
         )}
       </div>
-      
-      <div className='mb-3'>
+
+      <div className='mb-3 relative z-10'>
         <h3 className='text-lg font-semibold line-clamp-2'>{dream.title}</h3>
-      </div>
       
-      <div className='w-full h-64 mb-3 rounded-lg overflow-hidden bg-gradient-to-br from-indigo-200 via-purple-200 to-pink-200 dark:from-indigo-800 dark:via-purple-800 dark:to-pink-800'>
+      <div className={`w-full h-64 mb-3 rounded-lg overflow-hidden bg-gradient-to-br ${placeholderBase}`}>
         {dream.image ? (
           <img 
             src={dream.image} 
@@ -113,19 +141,21 @@ export default function DreamCard({ dream, showAuthor = true, onClick, showFavor
             className='w-full h-full object-cover'
           />
         ) : (
-          <div className='w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-100 via-purple-100 to-pink-100 dark:from-indigo-900 dark:via-purple-900 dark:to-pink-900'>
-            <div className='text-center text-base-content/30'>
+          <div className='w-full h-full flex items-center justify-center relative'>
+            <div className={`absolute inset-0 bg-gradient-to-br ${placeholderTint}`} />
+            <div className='relative z-10 text-center text-base-content/50'>
               <div className='text-6xl mb-2'>🌙</div>
               <div className='text-sm font-medium'>Dream Image</div>
             </div>
           </div>
         )}
       </div>
+      </div>
       
       {/* Instagram-style action buttons */}
-      <div className='flex items-center gap-4 mb-3'>
+      <div className='flex items-center gap-4 mb-3 relative z-10'>
         <button
-          className={`btn btn-ghost btn-sm p-0 ${likedByMe ? 'text-red-500' : ''}`}
+          className={`btn btn-ghost btn-sm p-0 ${likedByMe ? likeColorClass : ''}`}
           onClick={handleLikeClick}
         >
           {likedByMe ? (
@@ -177,14 +207,14 @@ export default function DreamCard({ dream, showAuthor = true, onClick, showFavor
         </div>
       )}
       
-      <p className='text-base-content/70 mb-3 flex-grow line-clamp-3'>
+      <p className='text-base-content/70 mb-3 flex-grow line-clamp-3 relative z-10'>
         {dream.content && dream.content.length > 150 
           ? `${dream.content.substring(0, 150)}...` 
           : dream.content || dream.description || ''
         }
       </p>
       
-      <div className='flex flex-wrap gap-1 mb-3'>
+      <div className='flex flex-wrap gap-1 mb-3 relative z-10'>
         {dream.mood && (
           <span className='badge badge-primary badge-sm'>{dream.mood}</span>
         )}
@@ -194,7 +224,7 @@ export default function DreamCard({ dream, showAuthor = true, onClick, showFavor
       </div>
       
       {showAuthor && dream.user && (
-        <div className='text-sm text-base-content/50 mt-auto'>
+        <div className='text-sm text-base-content/50 mt-auto relative z-10'>
           Shared by: {dream.user.firstName && dream.user.lastName 
             ? `${dream.user.firstName} ${dream.user.lastName}`
             : dream.user.firstName || dream.user.email

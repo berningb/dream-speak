@@ -15,6 +15,7 @@ import Dream from './pages/Dream'
 import Explore from './pages/Explore'
 import Reflections from './pages/Reflections'
 import Analytics from './pages/Analytics'
+import NewDream from './pages/NewDream'
 
 import Connections from './pages/Connections'
 // import Whispers from './pages/Connections/components/Whispers'
@@ -61,6 +62,7 @@ const AppRoutes = () => (
       <Route path='/reflections' element={<Reflections />} />
       <Route path='/analytics' element={<Analytics />} />
       <Route path='/connections' element={<Connections />} />
+      <Route path='/new-dream' element={<NewDream />} />
       <Route path='/signup' element={<Signup />} />
       <Route path='/settings' element={<RequireProfile><Settings /></RequireProfile>} />
       

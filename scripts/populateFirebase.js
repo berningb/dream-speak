@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { getFirestore, collection, addDoc, serverTimestamp, getDocs, doc, updateDoc } from 'firebase/firestore';
 
 // Firebase config
 const firebaseConfig = {
@@ -34,7 +34,8 @@ const testDreams = [
     role: true,
     people: ['myself'],
     places: ['futuristic city', 'sky'],
-    things: ['flying cars', 'holograms', 'neon lights']
+    things: ['flying cars', 'holograms', 'neon lights'],
+    type: 'sweet'
   },
   {
     title: 'The Mysterious Library',
@@ -49,7 +50,8 @@ const testDreams = [
     role: true,
     people: ['myself', 'librarian'],
     places: ['ancient library', 'endless corridors'],
-    things: ['books', 'portal', 'whispering shelves']
+    things: ['books', 'portal', 'whispering shelves'],
+    type: 'sweet'
   },
   {
     title: 'Ocean Depths Adventure',
@@ -64,7 +66,8 @@ const testDreams = [
     role: true,
     people: ['myself', 'merpeople'],
     places: ['deep ocean', 'underwater city'],
-    things: ['bioluminescent creatures', 'crystal clear water']
+    things: ['bioluminescent creatures', 'crystal clear water'],
+    type: 'sweet'
   },
   {
     title: 'Time Travel Mishap',
@@ -79,7 +82,8 @@ const testDreams = [
     role: true,
     people: ['myself', '1920s crowd'],
     places: ['1920s street', 'past'],
-    things: ['modern clothes', 'time machine']
+    things: ['modern clothes', 'time machine'],
+    type: 'sweet'
   },
   {
     title: 'Giant Robot Battle',
@@ -94,7 +98,8 @@ const testDreams = [
     role: true,
     people: ['myself', 'alien invaders'],
     places: ['futuristic city', 'battlefield'],
-    things: ['giant robot', 'laser weapons', 'alien ships']
+    things: ['giant robot', 'laser weapons', 'alien ships'],
+    type: 'sweet'
   },
   {
     title: 'Peaceful Garden Meditation',
@@ -109,7 +114,8 @@ const testDreams = [
     role: true,
     people: ['myself'],
     places: ['zen garden', 'cherry blossom grove'],
-    things: ['wind chimes', 'jasmine flowers', 'stream']
+    things: ['wind chimes', 'jasmine flowers', 'stream'],
+    type: 'sweet'
   },
   {
     title: 'Space Station Life',
@@ -124,7 +130,8 @@ const testDreams = [
     role: true,
     people: ['myself', 'other astronauts'],
     places: ['space station', 'orbit'],
-    things: ['scientific equipment', 'Earth view', 'spacesuits']
+    things: ['scientific equipment', 'Earth view', 'spacesuits'],
+    type: 'sweet'
   },
   {
     title: 'Magical Forest Encounter',
@@ -139,7 +146,8 @@ const testDreams = [
     role: true,
     people: ['myself', 'wise owl'],
     places: ['enchanted forest', 'talking trees'],
-    things: ['magical map', 'hidden treasures', 'talking animals']
+    things: ['magical map', 'hidden treasures', 'talking animals'],
+    type: 'sweet'
   },
   {
     title: 'Nightmare: Being Chased',
@@ -154,7 +162,8 @@ const testDreams = [
     role: true,
     people: ['myself', 'shadowy figures'],
     places: ['dark maze', 'changing corridors'],
-    things: ['shadows', 'maze walls']
+    things: ['shadows', 'maze walls'],
+    type: 'nightmare'
   },
   {
     title: 'Cooking Competition',
@@ -169,7 +178,8 @@ const testDreams = [
     role: true,
     people: ['myself', 'famous chefs', 'competitors'],
     places: ['kitchen', 'competition venue'],
-    things: ['cooking equipment', 'unusual ingredients', 'judges table']
+    things: ['cooking equipment', 'unusual ingredients', 'judges table'],
+    type: 'sweet'
   },
   {
     title: 'Floating Islands',
@@ -184,7 +194,8 @@ const testDreams = [
     role: true,
     people: ['myself'],
     places: ['floating islands', 'sky', 'rope bridges'],
-    things: ['rope bridges', 'tropical plants', 'snow']
+    things: ['rope bridges', 'tropical plants', 'snow'],
+    type: 'sweet'
   },
   {
     title: 'Dream Within a Dream',
@@ -199,7 +210,8 @@ const testDreams = [
     role: true,
     people: ['myself'],
     places: ['dream layers', 'reality'],
-    things: ['dream state', 'waking attempts']
+    things: ['dream state', 'waking attempts'],
+    type: 'sweet'
   },
   {
     title: 'Musical Performance',
@@ -214,7 +226,8 @@ const testDreams = [
     role: true,
     people: ['myself', 'audience'],
     places: ['stage', 'concert hall'],
-    things: ['magical instrument', 'stage lights', 'microphone']
+    things: ['magical instrument', 'stage lights', 'microphone'],
+    type: 'sweet'
   },
   {
     title: 'Ancient Temple Discovery',
@@ -229,7 +242,8 @@ const testDreams = [
     role: true,
     people: ['myself'],
     places: ['ancient temple', 'jungle', 'hidden chamber'],
-    things: ['hieroglyphics', 'booby traps', 'ancient artifacts']
+    things: ['hieroglyphics', 'booby traps', 'ancient artifacts'],
+    type: 'sweet'
   },
   {
     title: 'Flying with Dragons',
@@ -244,7 +258,8 @@ const testDreams = [
     role: true,
     people: ['myself', 'friendly dragon'],
     places: ['sky', 'clouds', 'dragon world'],
-    things: ['dragon', 'fire breath', 'clouds']
+    things: ['dragon', 'fire breath', 'clouds'],
+    type: 'sweet'
   },
   {
     title: 'Dream for This Month',
@@ -258,7 +273,8 @@ const testDreams = [
     role: true,
     people: ['myself'],
     places: ['home'],
-    things: ['bed']
+    things: ['bed'],
+    type: 'sweet'
   }
 ];
 
@@ -272,12 +288,36 @@ async function populateFirebase() {
     const createdFavorites = [];
     const createdNotes = [];
 
+    // Migration: set type: 'sweet' for any existing dreams not owned by USER_ID
+    console.log('🔄 Migrating existing dreams to include randomized type where missing, and mapping legacy "normal" → "sweet"...');
+    const allDreamsSnap = await getDocs(collection(db, 'dreams'));
+    let migrated = 0;
+    const TYPES = ['sweet', 'lucid', 'nightmare']
+    for (const d of allDreamsSnap.docs) {
+      const data = d.data();
+      const currentType = data.type
+      let nextType = currentType
+      if (!currentType) {
+        nextType = TYPES[Math.floor(Math.random() * TYPES.length)]
+      } else if (currentType === 'normal') {
+        nextType = 'sweet'
+      }
+      if (nextType !== currentType) {
+        await updateDoc(doc(db, 'dreams', d.id), { type: nextType, updatedAt: serverTimestamp() })
+        migrated++
+      }
+    }
+    console.log(`✅ Migrated ${migrated} existing dreams to have a valid type`);
+
     // Create dreams
     for (const dreamData of testDreams) {
       console.log(`Creating dream: ${dreamData.title}`);
+      const TYPES = ['sweet', 'lucid', 'nightmare']
+      const randomType = TYPES[Math.floor(Math.random() * TYPES.length)]
       
       const dream = await addDoc(collection(db, 'dreams'), {
         ...dreamData,
+        type: randomType,
         userId: USER_ID,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
