@@ -6,16 +6,16 @@ import { getStorage } from 'firebase/storage';
 import { getAnalytics } from "firebase/analytics";
 
 // Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "AIzaSyDcLZdRywuiluxqx9o7X3HA5bQQxfyEIE8",
-  authDomain: "dream-speak.firebaseapp.com",
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
   projectId: "dream-speak",
   storageBucket: "dream-speak.firebasestorage.app",
   messagingSenderId: "821728503475",
-  appId: "1:821728503475:web:37c025fdb53a402a8572c6",
+  appId: import.meta.env.VITE_FIREBASE_APP_ID,
   measurementId: "G-BXXH8SWV1Z"
 };
+
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
