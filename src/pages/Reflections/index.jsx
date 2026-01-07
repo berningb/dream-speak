@@ -4,7 +4,7 @@ import useFavorites from '../../hooks/useFavorites';
 import Layout from '../../components/Layout';
 
 export default function Reflections() {
-  const { isAuthenticated } = useFirebaseAuth();
+  const { isAuthenticated, loginWithGoogle } = useFirebaseAuth();
   const { favorites, loading, saveNote, updateNote, removeNote } = useFavorites();
   const [selectedFavorite, setSelectedFavorite] = useState(null);
   const [noteContent, setNoteContent] = useState('');
@@ -51,9 +51,28 @@ export default function Reflections() {
 
   if (!isAuthenticated) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen">
-        <h1 className="text-2xl font-bold mb-4">Please sign in to view favorites</h1>
-      </div>
+      <Layout>
+        <div className="flex flex-col items-center justify-center min-h-screen p-6 text-center">
+          <div className="max-w-md">
+            <h1 className="text-3xl font-bold mb-4">Reflections</h1>
+            <p className="text-lg text-base-content/70 mb-8">
+              Reflections is your personal space for dream notes and saved favorites. 
+              Please sign in to start your journey.
+            </p>
+            <div className="flex flex-col gap-4">
+              <button 
+                className="btn btn-primary btn-lg"
+                onClick={loginWithGoogle}
+              >
+                Sign In with Google
+              </button>
+              <a href="/" className="btn btn-ghost">
+                Back to Home
+              </a>
+            </div>
+          </div>
+        </div>
+      </Layout>
     );
   }
 

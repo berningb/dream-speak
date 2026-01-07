@@ -51,7 +51,7 @@ const MOOD_COLORS = {
 
 
 export default function Analytics() {
-  const { user, isAuthenticated } = useFirebaseAuth();
+  const { user, isAuthenticated, loginWithGoogle } = useFirebaseAuth();
   const [dreams, setDreams] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -208,8 +208,24 @@ export default function Analytics() {
   if (!isAuthenticated) {
     return (
       <Layout>
-        <div className="flex flex-col items-center justify-center min-h-screen">
-          <h1 className="text-2xl font-bold mb-4">Please sign in to view analytics</h1>
+        <div className="flex flex-col items-center justify-center min-h-screen p-6 text-center">
+          <div className="max-w-md">
+            <h1 className="text-3xl font-bold mb-4">Dream Analytics</h1>
+            <p className="text-lg text-base-content/70 mb-8">
+              Unlock deep insights into your subconscious. Sign in to see patterns in your dreams, moods, and themes.
+            </p>
+            <div className="flex flex-col gap-4">
+              <button 
+                className="btn btn-primary btn-lg"
+                onClick={loginWithGoogle}
+              >
+                Sign In with Google
+              </button>
+              <a href="/" className="btn btn-ghost">
+                Back to Home
+              </a>
+            </div>
+          </div>
         </div>
       </Layout>
     );
