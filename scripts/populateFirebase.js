@@ -1,16 +1,26 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, addDoc, serverTimestamp, getDocs, doc, updateDoc } from 'firebase/firestore';
+import dotenv from 'dotenv';
 
-// Firebase config
+// Load environment variables from .env (root)
+dotenv.config();
+
+// Firebase config from environment (supports both Vite-style and plain keys)
+const env = process.env;
 const firebaseConfig = {
-  apiKey: "AIzaSyDcLZdRywuiluxqx9o7X3HA5bQQxfyEIE8",
-  authDomain: "dream-speak.firebaseapp.com",
-  projectId: "dream-speak",
-  storageBucket: "dream-speak.firebasestorage.app",
-  messagingSenderId: "821728503475",
-  appId: "1:821728503475:web:37c025fdb53a402a8572c6",
-  measurementId: "G-BXXH8SWV1Z"
+  apiKey: env.VITE_FIREBASE_API_KEY || env.FIREBASE_API_KEY,
+  authDomain: env.VITE_FIREBASE_AUTH_DOMAIN || env.FIREBASE_AUTH_DOMAIN,
+  projectId: env.VITE_FIREBASE_PROJECT_ID || env.FIREBASE_PROJECT_ID,
+  storageBucket: env.VITE_FIREBASE_STORAGE_BUCKET || env.FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: env.VITE_FIREBASE_MESSAGING_SENDER_ID || env.FIREBASE_MESSAGING_SENDER_ID,
+  appId: env.VITE_FIREBASE_APP_ID || env.FIREBASE_APP_ID,
+  measurementId: env.VITE_FIREBASE_MEASUREMENT_ID || env.FIREBASE_MEASUREMENT_ID
 };
+
+if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
+  console.error('❌ Missing Firebase environment variables. Please configure your .env file.');
+  process.exit(1);
+}
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
