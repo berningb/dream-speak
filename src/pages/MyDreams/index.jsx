@@ -251,8 +251,13 @@ export default function MyDreams () {
     }
   }
 
-  if (loading) return <div>Loading...</div>
-  if (error) return <div>Error: {error}</div>
+  if (loading) return (
+    <Layout>
+      <div className="flex items-center justify-center min-h-screen">
+        <span className="loading loading-spinner loading-lg"></span>
+      </div>
+    </Layout>
+  )
 
   // No inline add modal on this page; redirect to New Dream page instead
 

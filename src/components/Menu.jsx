@@ -14,7 +14,6 @@ export default function Menu() {
             </svg>
           </div>
           <ul tabIndex={0} className="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52">
-            <li><a href="/">Home</a></li>
             <li><a href="/my-dreams">My Dreams</a></li>
             <li><a href="/new-dream">New Dream</a></li>
             <li><a href="/explore">Explore</a></li>
@@ -30,7 +29,6 @@ export default function Menu() {
       </div>
       <div className="navbar-center hidden lg:flex">
         <ul className="menu menu-horizontal px-1">
-          <li><a href="/">Home</a></li>
           <li><a href="/my-dreams">My Dreams</a></li>
           <li><a href="/new-dream">New Dream</a></li>
           <li><a href="/explore">Explore</a></li>
