@@ -289,22 +289,6 @@ export default function Explore() {
     )
   }
 
-  if (error) {
-    return (
-      <Layout>
-        <div className="flex justify-center items-center min-h-screen">
-          <div className="text-center">
-            <h2 className="text-2xl font-bold mb-4">Error</h2>
-            <p className="text-error">{error}</p>
-            <button className="btn btn-primary mt-4" onClick={fetchDreams}>
-              Try Again
-            </button>
-          </div>
-        </div>
-      </Layout>
-    )
-  }
-
   return (
     <Layout>
       <AddDreamModal onAddDream={handleAddDream} />

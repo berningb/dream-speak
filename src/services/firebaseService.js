@@ -258,7 +258,8 @@ export const getPublicDreams = async () => {
     });
   } catch (error) {
     console.error('❌ Error getting public dreams:', error);
-    throw error;
+    // Return empty array instead of throwing to avoid breaking the UI
+    return [];
   }
 };
 
