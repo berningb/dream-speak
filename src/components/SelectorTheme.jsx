@@ -2,63 +2,57 @@ import { useState, useEffect } from 'react';
 import { IoColorPaletteOutline } from "react-icons/io5";
 import { themes } from '../utils';
 
-export default function SelectorTheme() {
-    const [isOpen, setIsOpen] = useState(false);
+export function ThemeSelectorContent({ onSelect, compact = false }) {
     const [currentTheme, setCurrentTheme] = useState('light');
 
-    // Load saved theme on component mount
     useEffect(() => {
         const savedTheme = localStorage.getItem('dream-speak-theme') || 'light';
         setCurrentTheme(savedTheme);
-        document.documentElement.setAttribute('data-theme', savedTheme);
     }, []);
 
     const handleThemeChange = (theme) => {
-        // Save to localStorage
         localStorage.setItem('dream-speak-theme', theme);
-        
-        // Update state
         setCurrentTheme(theme);
-        
-        // Apply to DOM
         document.documentElement.setAttribute('data-theme', theme);
-        
-        // Close dropdown
-        setIsOpen(false);
-    };
-
-    const toggleDropdown = () => {
-        setIsOpen(!isOpen);
+        onSelect?.();
     };
 
     return (
-        <div className={`dropdown dropdown-end ${isOpen ? 'dropdown-open' : ''}`} style={{ zIndex: 1000 }}>
-            <button className="btn-ghost btn-circle btn relative" onClick={toggleDropdown}>
+        <ul className={`grid gap-1 ${compact ? 'grid-cols-1 w-full min-w-0 max-h-64 overflow-y-auto p-2' : 'grid-cols-2 w-36 sm:w-40 max-w-[calc(100vw-2rem)] gap-2 sm:gap-4 p-2'}`}>
+            {themes.map((theme) => (
+                <li key={theme.name} className="w-full list-none min-w-0">
+                    <a
+                        onClick={() => handleThemeChange(theme.name)}
+                        className={`flex items-center gap-3 rounded cursor-pointer min-w-0 ${compact ? 'p-2' : 'p-2'} ${currentTheme === theme.name ? 'bg-primary text-primary-content' : 'hover:bg-base-200'}`}
+                    >
+                        <span className={`flex-grow font-medium truncate min-w-0 ${compact ? 'text-sm' : 'text-sm'}`}>
+                            {theme.name.charAt(0).toUpperCase() + theme.name.slice(1)}
+                        </span>
+                        <span className="flex items-center shrink-0 gap-1 opacity-50">
+                            {theme.colors.slice(0, 4).map((color, idx) => (
+                                <span key={idx} className={`rounded-full ${compact ? 'w-3 h-3' : 'w-2 h-2'}`} style={{ backgroundColor: color }}></span>
+                            ))}
+                        </span>
+                    </a>
+                </li>
+            ))}
+        </ul>
+    );
+}
+
+export default function SelectorTheme() {
+    const [isOpen, setIsOpen] = useState(false);
+
+    return (
+        <div className={`dropdown dropdown-end ${isOpen ? 'dropdown-open' : ''}`} style={{ zIndex: 9999 }}>
+            <div tabIndex={0} role="button" className="btn btn-ghost btn-circle relative" onClick={() => setIsOpen(!isOpen)}>
                 <IoColorPaletteOutline className="text-xl" />
-                <div className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-primary border-2 border-base-100"></div>
-            </button>
+                <span className="absolute -top-1 -right-1 w-3 h-3 rounded-full bg-primary border-2 border-base-100"></span>
+            </div>
             {isOpen && (
-                <ul className="dropdown-content menu p-2 shadow bg-base-100 rounded-box w-80 sm:w-96 max-w-[calc(100vw-2rem)] grid grid-cols-2 gap-2 sm:gap-4">
-                    {themes.map((theme) => (
-                        <li key={theme.name} className="w-full">
-                            <a 
-                                onClick={() => handleThemeChange(theme.name)} 
-                                className={`flex items-center gap-2 p-2 rounded hover:bg-gray-200 ${
-                                    currentTheme === theme.name ? 'bg-primary text-primary-content' : ''
-                                }`}
-                            >
-                                <span className="flex-grow text-sm font-medium">
-                                    {theme.name.charAt(0).toUpperCase() + theme.name.slice(1)}
-                                </span>
-                                <span className="flex items-center h-full shrink-0 flex-wrap gap-1">
-                                    {theme.colors.map((color, idx) => (
-                                        <span key={idx} className="w-3 h-3 rounded-full" style={{ backgroundColor: color }}></span>
-                                    ))}
-                                </span>
-                            </a>
-                        </li>
-                    ))}
-                </ul>
+                <div className="dropdown-content overflow-hidden shadow bg-base-100 rounded-box mt-3 z-[9999] animate-theme-dropdown-open origin-right">
+                    <ThemeSelectorContent onSelect={() => setIsOpen(false)} compact />
+                </div>
             )}
         </div>
     );

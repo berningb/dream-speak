@@ -1,6 +1,6 @@
 import Menu from './Menu'
 
-export default function Layout ({ children }) {
+export default function Layout({ children }) {
   return (
     <div className="relative min-h-screen">
       {/* Dreamy floating background shapes for all pages */}
@@ -16,7 +16,7 @@ export default function Layout ({ children }) {
         <div className="absolute animate-float-alt4-pulse-subtle w-[580px] h-[580px] rounded-full blur bg-base-200 animation-delay-3500" />
       </div>
       <Menu />
-      <div className='border-b border-gray-300' />
+      <div className='border-b border-base-300' />
       <div className='content px-4 sm:px-6 md:px-8 py-4'>{children}</div>
     </div>
   )
