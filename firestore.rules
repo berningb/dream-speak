@@ -91,6 +91,27 @@ service cloud.firestore {
       // Users can only delete their own favorites
       allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
     }
+    
+    // Friend requests
+    match /friendRequests/{requestId} {
+      allow read: if isAuthenticated() && (
+        resource.data.fromUserId == request.auth.uid || resource.data.toUserId == request.auth.uid
+      );
+      allow create: if isAuthenticated() && request.resource.data.fromUserId == request.auth.uid;
+      allow update, delete: if isAuthenticated() && (
+        resource.data.fromUserId == request.auth.uid || resource.data.toUserId == request.auth.uid
+      );
+    }
+    
+    // Friends (accepted friendships)
+    match /friends/{friendId} {
+      allow read, write: if isAuthenticated() && (
+        resource.data.userId1 == request.auth.uid || resource.data.userId2 == request.auth.uid
+      );
+      allow create: if isAuthenticated() && (
+        request.resource.data.userId1 == request.auth.uid || request.resource.data.userId2 == request.auth.uid
+      );
+    }
   }
 }
 
