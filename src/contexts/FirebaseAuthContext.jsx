@@ -4,11 +4,17 @@ import {
   createUserWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
+  getRedirectResult,
   GoogleAuthProvider,
   signInWithPopup,
-  updateProfile
+  updateProfile,
+  deleteUser,
+  reauthenticateWithPopup,
+  reauthenticateWithCredential,
+  EmailAuthProvider
 } from 'firebase/auth';
 import { auth } from '../firebase';
+import { invalidateAllDreams, invalidateLists } from '../services/dreamCacheService';
 
 const FirebaseAuthContext = createContext();
 
@@ -25,12 +31,33 @@ export const FirebaseAuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
-      setUser(user);
-      setLoading(false);
-    });
+    let unsubscribe;
+    let mounted = true;
 
-    return unsubscribe;
+    const initAuth = async () => {
+      try {
+        await getRedirectResult(auth);
+      } catch (err) {
+        console.error('Redirect sign-in error:', err);
+      }
+
+      if (mounted) {
+        unsubscribe = onAuthStateChanged(auth, (authUser) => {
+          if (!authUser) {
+            invalidateAllDreams();
+            invalidateLists();
+          }
+          setUser(authUser);
+          setLoading(false);
+        });
+      }
+    };
+
+    initAuth();
+    return () => {
+      mounted = false;
+      unsubscribe?.();
+    };
   }, []);
 
   const login = async (email, password) => {
@@ -53,7 +80,32 @@ export const FirebaseAuthProvider = ({ children }) => {
   };
 
   const logout = async () => {
+    invalidateAllDreams();
+    invalidateLists();
     await signOut(auth);
+  };
+
+  const deleteAccount = async (password = null) => {
+    if (!auth.currentUser) throw new Error('Not authenticated');
+    const provider = auth.currentUser.providerData?.[0]?.providerId;
+    try {
+      if (provider === 'google.com') {
+        await reauthenticateWithPopup(auth.currentUser, new GoogleAuthProvider());
+      } else if (provider === 'password' && password) {
+        const cred = EmailAuthProvider.credential(auth.currentUser.email, password);
+        await reauthenticateWithCredential(auth.currentUser, cred);
+      } else if (provider === 'password') {
+        throw new Error('Please enter your password to confirm account deletion.');
+      } else {
+        throw new Error('Re-authentication is required. Please sign out and sign in again, then try deleting your account.');
+      }
+      await deleteUser(auth.currentUser);
+    } catch (err) {
+      if (err.code === 'auth/requires-recent-login') {
+        throw new Error('Please sign out and sign in again, then try deleting your account.');
+      }
+      throw err;
+    }
   };
 
   const updateUserProfile = async (profileData) => {
@@ -89,6 +141,7 @@ export const FirebaseAuthProvider = ({ children }) => {
     loginWithGoogle,
     logout,
     updateUserProfile,
+    deleteAccount,
     isAuthenticated: !!user
   };
 

@@ -77,6 +77,14 @@ export default {
           '0%, 100%': { opacity: '0.15' },
           '50%': { opacity: '0.3' },
         },
+        'theme-dropdown-open': {
+          '0%': { maxWidth: '0', opacity: '0' },
+          '100%': { maxWidth: '20rem', opacity: '1' },
+        },
+        'skeleton-breathe': {
+          '0%, 100%': { opacity: '0.4' },
+          '50%': { opacity: '0.8' },
+        },
       },
       animation: {
         // Only keep the combined float-pulse-subtle animations that are used
@@ -88,6 +96,8 @@ export default {
         'float-alt2-pulse-subtle': 'float-alt2 28s ease-in-out infinite, pulse-subtle 4s cubic-bezier(0.1, 0.3, 0, .1) infinite',
         'float-alt3-pulse-subtle': 'float-alt3 20s ease-in-out infinite, pulse-subtle 4s cubic-bezier(0.1, 0.3, 0, .1) infinite',
         'float-alt4-pulse-subtle': 'float-alt4 26s ease-in-out infinite, pulse-subtle 4s cubic-bezier(0.1, 0.3, 0, .1) infinite',
+        'theme-dropdown-open': 'theme-dropdown-open 0.25s ease-out forwards',
+        'skeleton-breathe': 'skeleton-breathe 2.5s ease-in-out infinite',
       },
       animationDelay: {
         '0': '0ms',

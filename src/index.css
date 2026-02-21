@@ -15,10 +15,32 @@
 }
 
 .modal-box {
-  background: white;
-  padding: 20px;
-  border-radius: 8px;
-  max-width: 80vw !important;
-  width: 80vw !important;
-  max-height: 85vh !important;
+  background-color: var(--fallback-b1, oklch(var(--b1)));
+}
+
+/* Compact button sizing site-wide */
+.btn:not(.btn-xs):not(.btn-circle) {
+  min-height: 2rem;
+  height: 2rem;
+  padding-left: 0.75rem;
+  padding-right: 0.75rem;
+  font-size: 0.8125rem;
+}
+.btn.btn-circle {
+  border-radius: 9999px;
+  aspect-ratio: 1;
+}
+.btn.btn-sm {
+  min-height: 1.75rem;
+  height: 1.75rem;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+  font-size: 0.75rem;
+}
+.btn.btn-lg {
+  min-height: 2.25rem;
+  height: 2.25rem;
+  padding-left: 1rem;
+  padding-right: 1rem;
+  font-size: 0.875rem;
 }
