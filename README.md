@@ -17,6 +17,7 @@ A beautiful, modern web application for sharing and exploring dreams with a supp
 
 ### 📝 Dream Management
 
+- **Dream Workflow**: AI-assisted dream capture with DeepSeek (V3.2) for conversational detail gathering and Google Nano Banana (Gemini) for dream image generation
 - **Create Dreams**: Rich dream logging with titles, content, moods, and tags
 - **Edit Dreams**: Update your dreams anytime with full editing capabilities
 - **Dream Gallery**: Beautiful card-based display of all your dreams
@@ -49,6 +50,18 @@ DreamSpeak supports multiple themes powered by DaisyUI:
 - Light, Dark, Cupcake, Emerald, and many more
 - Theme selection persists across sessions
 - Automatic system theme detection
+
+## 🔧 Dream Workflow (Optional)
+
+The Add Dream flow uses a conversational workflow powered by:
+
+- **DeepSeek (deepseek-chat)**: Helps pull dream details through follow-up questions. Context caching automatically reduces costs for repeated prompts.
+- **Google Nano Banana (Gemini 2.5 Flash Image)**: Generates dream images from your description via the [@google/genai](https://www.npmjs.com/package/@google/genai) SDK.
+
+Add these to your `.env` to enable the workflow:
+
+- `VITE_DEEPSEEK_API_KEY` – from [DeepSeek API](https://platform.deepseek.com)
+- `VITE_GOOGLE_API_KEY` or `VITE_GEMINI_API_KEY` – from [Google AI Studio](https://aistudio.google.com/)
 
 ## 🔒 Privacy Features
 

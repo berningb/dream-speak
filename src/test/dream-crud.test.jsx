@@ -5,8 +5,19 @@ import useDreams from '../hooks/useDreams'
 import AddDreamModal from '../components/AddDreamModal'
 import EditDreamModal from '../components/EditDreamModal'
 
-// Mock the useDreams hook
 vi.mock('../hooks/useDreams')
+vi.mock('../contexts/FirebaseAuthContext', () => ({
+  useFirebaseAuth: () => ({
+    user: { uid: 'test-uid' },
+    isAuthenticated: true
+  })
+}))
+vi.mock('../services/firebaseService', () => ({
+  createDream: vi.fn(),
+  updateDream: vi.fn(),
+  getDream: vi.fn(),
+  deleteDream: vi.fn()
+}))
 
 // Test data
 const mockDream = {
@@ -107,48 +118,45 @@ describe('Dream CRUD Operations', () => {
     })
 
     it('should handle add dream errors', async () => {
-      const errorMessage = 'Failed to add dream'
-      mockAddDream.mockRejectedValue(new Error(errorMessage))
-      
+      const { createDream } = await import('../services/firebaseService')
+      createDream.mockRejectedValue(new Error('Failed to add dream'))
       const onAddDream = vi.fn()
-      
+
       render(
         <TestWrapper>
           <AddDreamModal onAddDream={onAddDream} />
         </TestWrapper>
       )
 
-      // Fill out required fields
-      const titleInput = screen.getByPlaceholderText('Enter dream title...')
+      const titleInput = screen.getByPlaceholderText('Enter a captivating title for your dream...')
       fireEvent.change(titleInput, { target: { value: 'Test Dream' } })
+      const descInput = screen.getByPlaceholderText('Describe your dream in detail... What happened? How did it feel? What did you see?')
+      fireEvent.change(descInput, { target: { value: 'Test description' } })
 
-      // Submit the form
       const submitButton = screen.getByText('Save Dream')
       fireEvent.click(submitButton)
 
       await waitFor(() => {
-        expect(mockAddDream).toHaveBeenCalled()
+        expect(createDream).toHaveBeenCalled()
       })
-
-      // Error should be logged
-      expect(console.error).toHaveBeenCalledWith('Error adding dream:', expect.any(Error))
+      expect(onAddDream).not.toHaveBeenCalled()
     })
 
     it('should validate required fields', async () => {
+      const { createDream } = await import('../services/firebaseService')
       const onAddDream = vi.fn()
-      
+
       render(
         <TestWrapper>
           <AddDreamModal onAddDream={onAddDream} />
         </TestWrapper>
       )
 
-      // Try to submit without filling required fields
       const submitButton = screen.getByText('Save Dream')
       fireEvent.click(submitButton)
 
-      // Form should not submit due to HTML5 validation
-      expect(mockAddDream).not.toHaveBeenCalled()
+      await waitFor(() => {})
+      expect(createDream).not.toHaveBeenCalled()
     })
   })
 
