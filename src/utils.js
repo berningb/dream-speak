@@ -1,5 +1,8 @@
 import moment from 'moment'
 
+/** Shared set of image URLs that have finished loading. Used by DreamCard and Dream page for instant display when navigating. */
+export const loadedImageUrls = new Set()
+
 // Theme initialization function
 export const initializeTheme = () => {
   const savedTheme = localStorage.getItem('dream-speak-theme')
@@ -10,6 +13,16 @@ export const initializeTheme = () => {
   }
   return themeToApply
 };
+
+/** Front-facing handle for a user: username if set, else firstName + lastName, else displayName, else email or 'Dreamer' */
+export const getDisplayHandle = (user) => {
+  if (!user) return 'Dreamer'
+  if (user.username) return user.username
+  if (user.firstName || user.lastName) return `${user.firstName || ''} ${user.lastName || ''}`.trim()
+  if (user.displayName) return user.displayName
+  if (user.email) return user.email
+  return 'Dreamer'
+}
 
 export const formatDreamDate = (dateString) => {
   if (!dateString) return 'No date'
