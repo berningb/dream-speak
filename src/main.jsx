@@ -1,29 +1,31 @@
 import './index.css'
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import { BrowserRouter as Router, Route, Routes, Navigate, useLocation } from 'react-router-dom'
+import { BrowserRouter as Router, Route, Routes, Navigate, useLocation, useParams } from 'react-router-dom'
 import { initializeTheme } from './utils'
 import { useEffect } from 'react';
 
 // Import Firebase Auth
 import { FirebaseAuthProvider, useFirebaseAuth } from './contexts/FirebaseAuthContext';
+import { BackendUserProvider } from './hooks/useUsers';
 
 // Import all page components
 import Home from './pages/Home'
 import MyDreams from './pages/MyDreams'
 import Dream from './pages/Dream'
 import Explore from './pages/Explore'
-import Reflections from './pages/Reflections'
 import Analytics from './pages/Analytics'
-import NewDream from './pages/NewDream'
-
+import Favorites from './pages/Favorites'
 import Connections from './pages/Connections'
-// import Whispers from './pages/Connections/components/Whispers'
-// import Reactions from './pages/Connections/components/Reactions'
-// import Circles from './pages/Connections/components/Circles'
+import UserProfile from './pages/UserProfile'
 
+import Layout from './components/Layout'
 import Settings from './pages/Settings'
-import Signup from './pages/Settings/Signup';
+import Signup from './pages/Settings/Signup'
+function EditDreamRedirect() {
+  const { id } = useParams()
+  return <Navigate to={`/dream/${id}`} replace />
+}
 
 function Logout() {
   const { logout } = useFirebaseAuth();
@@ -50,42 +52,46 @@ function RequireProfile({ children }) {
 // Initialize theme immediately
 initializeTheme();
 
-// Routes component to avoid duplication
 const AppRoutes = () => (
   <Router>
-    <Routes>
-      {/* Main routes */}
-      <Route path='/' element={<Home />} />
-      <Route path='/home' element={<Home />} />
-      <Route path='/my-dreams' element={<MyDreams />} />
-      <Route path='/explore' element={<Explore />} />
-      <Route path='/reflections' element={<Reflections />} />
-      <Route path='/analytics' element={<Analytics />} />
-      <Route path='/connections' element={<Connections />} />
-      <Route path='/new-dream' element={<NewDream />} />
-      <Route path='/signup' element={<Signup />} />
-      <Route path='/settings' element={<RequireProfile><Settings /></RequireProfile>} />
-      
-      {/* Sub-routes - Coming Soon */}
-      <Route path='/connections/whispers' element={<div>Coming Soon</div>} />
-      <Route path='/connections/reactions' element={<div>Coming Soon</div>} />
-      <Route path='/connections/circles' element={<div>Coming Soon</div>} />
-      
-      {/* Dream detail route */}
-      <Route path='/dream/:id' element={<Dream />} />
-      
-      {/* Legacy routes for backward compatibility */}
-      <Route path='/all-dreams' element={<Explore />} />
-      <Route path='/user' element={<RequireProfile><Settings /></RequireProfile>} />
-      <Route path='/logout' element={<Logout />} />
-    </Routes>
+    <Layout>
+      <Routes>
+        <Route path='/' element={<Home />} />
+        <Route path='/home' element={<Home />} />
+        <Route path='/explore' element={<Explore />} />
+        <Route path='/explore/feed' element={<Explore />} />
+        <Route path='/explore/search' element={<Explore />} />
+        <Route path='/explore/shared' element={<Explore />} />
+        <Route path='/my-dreams' element={<MyDreams />} />
+        <Route path='/my-dreams/list' element={<MyDreams />} />
+        <Route path='/my-dreams/tags' element={<MyDreams />} />
+        <Route path='/my-dreams/privacy' element={<MyDreams />} />
+        <Route path='/favorites' element={<Favorites />} />
+        <Route path='/connections' element={<Connections />} />
+        <Route path='/user/:id' element={<UserProfile />} />
+        <Route path='/analytics' element={<Analytics />} />
+        <Route path='/signup' element={<Signup />} />
+        <Route path='/settings' element={<RequireProfile><Settings /></RequireProfile>} />
+        <Route path='/settings/profile' element={<RequireProfile><Settings /></RequireProfile>} />
+        <Route path='/settings/privacy' element={<RequireProfile><Settings /></RequireProfile>} />
+        <Route path='/settings/notifications' element={<RequireProfile><Settings /></RequireProfile>} />
+        <Route path='/settings/export' element={<RequireProfile><Settings /></RequireProfile>} />
+        <Route path='/dream/:id' element={<Dream />} />
+        <Route path='/edit-dream/:id' element={<EditDreamRedirect />} />
+        <Route path='/all-dreams' element={<Explore />} />
+        <Route path='/user' element={<RequireProfile><Settings /></RequireProfile>} />
+        <Route path='/logout' element={<Logout />} />
+      </Routes>
+    </Layout>
   </Router>
 );
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <FirebaseAuthProvider>
-      <AppRoutes />
+      <BackendUserProvider>
+        <AppRoutes />
+      </BackendUserProvider>
     </FirebaseAuthProvider>
   </StrictMode>
 );
