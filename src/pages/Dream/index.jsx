@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { useFirebaseAuth } from '../../contexts/FirebaseAuthContext'
-import { getDream, createComment, getComments, createLike, deleteLike, createFavorite, deleteFavorite, getLikes, getFavorites, canUserComment, canUserLike, canUserFavorite, deleteComment, updateComment, deleteDream } from '../../services/firebaseService'
-import Layout from '../../components/Layout'
-import { formatDreamDate } from '../../utils'
+import { getDream, getUser, createComment, getComments, createLike, deleteLike, createFavorite, deleteFavorite, getLikes, getFavorites, canUserComment, canUserLike, canUserFavorite, deleteComment, updateComment, deleteDream, updateDream, uploadDreamImage } from '../../services/firebaseService'
+import { interpretDream, describeDream } from '../../services/deepseekService'
+import { formatDreamDate, loadedImageUrls, getDisplayHandle } from '../../utils'
+import { generateDreamImage } from '../../services/imageService'
 
 export default function Dream() {
   const { id } = useParams()
@@ -22,6 +23,35 @@ export default function Dream() {
   const [userFavoriteId, setUserFavoriteId] = useState(null)
   const [editingCommentId, setEditingCommentId] = useState(null)
   const [editingCommentText, setEditingCommentText] = useState('')
+  const [searchParams, setSearchParams] = useSearchParams()
+  const [isEditMode, setIsEditMode] = useState(false)
+  const [editForm, setEditForm] = useState({ title: '', content: '', image: '', mood: '', emotionsStr: '', colorsStr: '', peopleStr: '', placesStr: '', thingsStr: '', role: false })
+  const [imageGenerating, setImageGenerating] = useState(false)
+  const [imageError, setImageError] = useState(null)
+  const [savingEdit, setSavingEdit] = useState(false)
+  const [describingWithAI, setDescribingWithAI] = useState(false)
+  const [interpretingLoading, setInterpretingLoading] = useState(false)
+  const [imageLoaded, setImageLoaded] = useState(false)
+  const [dreamOwner, setDreamOwner] = useState(null)
+
+  const dreamImageSrc = dream?.image || '/dream-placeholder.svg'
+  const dreamImageAlreadyLoaded = loadedImageUrls.has(dreamImageSrc)
+
+  useEffect(() => {
+    if (!dream?.image) {
+      setImageLoaded(true)
+      return
+    }
+    if (dreamImageAlreadyLoaded) {
+      setImageLoaded(true)
+      return
+    }
+    setImageLoaded(false)
+
+    const maxWait = 15000
+    const bail = setTimeout(() => setImageLoaded(true), maxWait)
+    return () => clearTimeout(bail)
+  }, [dream?.image, dreamImageAlreadyLoaded])
 
   useEffect(() => {
     const fetchDream = async () => {
@@ -30,6 +60,12 @@ export default function Dream() {
         const dreamData = await getDream(id)
         if (dreamData) {
           setDream(dreamData)
+          if (dreamData.userId) {
+            const owner = await getUser(dreamData.userId)
+            setDreamOwner(owner)
+          } else {
+            setDreamOwner(null)
+          }
           // Fetch comments for this dream
           const commentsData = await getComments(id)
           setComments(commentsData || [])
@@ -53,6 +89,34 @@ export default function Dream() {
       fetchDream()
     }
   }, [id, isAuthenticated])
+
+  useEffect(() => {
+    if (searchParams.get('edit') !== '1') return
+    if (!dream || !user) return
+    if (dream.userId === user.uid) {
+      setIsEditMode(true)
+    } else {
+      setSearchParams({})
+    }
+  }, [searchParams, dream?.userId, user?.uid, setSearchParams])
+
+  useEffect(() => {
+    if (dream && isEditMode) {
+      const arrToStr = (arr) => (Array.isArray(arr) ? arr.join(', ') : '')
+      setEditForm({
+        title: dream.title || '',
+        content: dream.content || dream.description || '',
+        image: dream.image || '',
+        mood: dream.mood || '',
+        emotionsStr: arrToStr(dream.emotions),
+        colorsStr: arrToStr(dream.colors),
+        peopleStr: arrToStr(dream.people),
+        placesStr: arrToStr(dream.places),
+        thingsStr: arrToStr(dream.things),
+        role: dream.role || false
+      })
+    }
+  }, [dream, isEditMode])
 
   const loadLikeFavoriteState = async () => {
     try {
@@ -224,50 +288,166 @@ export default function Dream() {
     setEditingCommentText('')
   }
 
+  const handleGenerateInterpretation = async () => {
+    if (!dream?.content || !user || dream.userId !== user.uid) return
+    try {
+      setInterpretingLoading(true)
+      const interpretation = await interpretDream(dream.content)
+      await updateDream(id, { interpretation })
+      setDream(prev => ({ ...prev, interpretation }))
+    } catch (err) {
+      console.error('Error generating interpretation:', err)
+      alert(err.message || 'Failed to generate interpretation. Ensure VITE_DEEPSEEK_API_KEY is set.')
+    } finally {
+      setInterpretingLoading(false)
+    }
+  }
+
+  const handleSaveEdit = async (e) => {
+    e?.preventDefault()
+    if (dream.userId !== user?.uid) {
+      setIsEditMode(false)
+      setSearchParams({})
+      return
+    }
+    setSavingEdit(true)
+    try {
+      let imageUrl = editForm.image || null
+      if (imageUrl?.startsWith('data:')) {
+        imageUrl = await uploadDreamImage(imageUrl, id)
+      }
+      await updateDream(id, {
+        title: editForm.title,
+        content: editForm.content,
+        image: imageUrl,
+        mood: editForm.mood,
+        emotions: parseCommaList(editForm.emotionsStr),
+        colors: parseCommaList(editForm.colorsStr),
+        people: parseCommaList(editForm.peopleStr),
+        places: parseCommaList(editForm.placesStr),
+        things: parseCommaList(editForm.thingsStr),
+        role: editForm.role
+      })
+      setDream(prev => ({
+        ...prev,
+        title: editForm.title,
+        content: editForm.content,
+        image: imageUrl,
+        mood: editForm.mood,
+        emotions: parseCommaList(editForm.emotionsStr),
+        colors: parseCommaList(editForm.colorsStr),
+        people: parseCommaList(editForm.peopleStr),
+        places: parseCommaList(editForm.placesStr),
+        things: parseCommaList(editForm.thingsStr),
+        role: editForm.role
+      }))
+      setIsEditMode(false)
+      setSearchParams({})
+    } catch (err) {
+      console.error('Error saving dream:', err)
+      alert('Failed to save. Please try again.')
+    } finally {
+      setSavingEdit(false)
+    }
+  }
+
+  const handleCancelDreamEdit = () => {
+    setIsEditMode(false)
+    setSearchParams({})
+  }
+
+  const handleGenerateImage = async () => {
+    const prompt = editForm.content || editForm.title || 'A dream scene'
+    setImageGenerating(true)
+    setImageError(null)
+    try {
+      const imageUrl = await generateDreamImage(prompt)
+      if (imageUrl) setEditForm(prev => ({ ...prev, image: imageUrl }))
+    } catch (err) {
+      setImageError(err.message)
+    } finally {
+      setImageGenerating(false)
+    }
+  }
+
+  const parseCommaList = (str) => str.split(',').map(s => s.trim()).filter(Boolean)
+
+  const handleDescribeWithAI = async () => {
+    const input = editForm.content || editForm.title || ''
+    if (!input.trim()) {
+      alert('Add a title or some notes first, then AI can expand it.')
+      return
+    }
+    setDescribingWithAI(true)
+    try {
+      const expanded = await describeDream(input)
+      setEditForm(prev => ({ ...prev, content: expanded }))
+    } catch (err) {
+      console.error('Error describing dream:', err)
+      alert(err.message || 'Failed to describe dream. Ensure VITE_DEEPSEEK_API_KEY is set.')
+    } finally {
+      setDescribingWithAI(false)
+    }
+  }
+
   if (loading) {
     return (
-      <Layout>
-        <div className="flex justify-center items-center min-h-screen">
-          <span className="loading loading-spinner loading-lg"></span>
-        </div>
-      </Layout>
+      <div className="flex justify-center items-center min-h-screen">
+        <span className="loading loading-spinner loading-lg"></span>
+      </div>
     )
   }
 
   if (error || !dream) {
     return (
-      <Layout>
-        <div className="flex justify-center items-center min-h-screen">
-          <div className="text-center">
-            <h2 className="text-2xl font-bold mb-4">Dream Not Found</h2>
-            <p className="text-base-content/70 mb-4">{error || 'This dream could not be loaded'}</p>
-            <button className="btn btn-primary" onClick={() => navigate('/explore')}>
-              Back to Explore
-            </button>
-          </div>
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-4">Dream Not Found</h2>
+          <p className="text-base-content/70 mb-4">{error || 'This dream could not be loaded'}</p>
+          <button className="btn btn-primary" onClick={() => navigate('/explore')}>
+            Back to Explore
+          </button>
         </div>
-      </Layout>
+      </div>
     )
   }
 
   return (
-    <Layout>
-      <div className='flex flex-col items-center justify-start min-h-screen p-6'>
-        <div className='w-full max-w-4xl'>
-          <div className='mb-6'>
-            <button 
-              className='btn btn-outline mb-4'
-              onClick={() => navigate(-1)}
-            >
-              ← Back
-            </button>
-          </div>
-
+    <>
+    <div className='flex flex-col items-center justify-start min-h-screen p-6'>
+      <div className='w-full max-w-4xl'>
           <div className='card bg-base-100 shadow-xl'>
             <div className='card-body'>
-              <div className='flex justify-between items-start mb-4'>
-                <h1 className='text-3xl font-bold'>{dream.title}</h1>
-                <div className='flex items-center gap-2'>
+              <div className='flex justify-between items-start gap-4 mb-4'>
+                <div className='flex items-center gap-3 min-w-0 flex-1'>
+                  <button 
+                    className='btn btn-ghost btn-md shrink-0 gap-2'
+                    onClick={() => navigate(-1)}
+                    aria-label='Go back'
+                  >
+                    <svg className='w-5 h-5' fill='none' stroke='currentColor' viewBox='0 0 24 24'>
+                      <path strokeLinecap='round' strokeLinejoin='round' strokeWidth={2} d='M15 19l-7-7 7-7' />
+                    </svg>
+                    <span className='text-base font-medium'>Back</span>
+                  </button>
+                  {isEditMode && dream.userId === user?.uid ? (
+                    <input
+                      type='text'
+                      className='input input-bordered flex-1 text-xl font-bold'
+                      value={editForm.title}
+                      onChange={(e) => setEditForm(prev => ({ ...prev, title: e.target.value }))}
+                      placeholder='Dream title...'
+                    />
+                  ) : (
+                    <h1 className='text-3xl font-bold truncate'>{dream.title}</h1>
+                  )}
+                </div>
+                <div className='flex items-center gap-2 shrink-0'>
+                  {dreamOwner && (
+                    <Link to={`/user/${dreamOwner.username || dreamOwner.id}`} className='text-sm text-base-content/70 hover:text-primary link link-hover'>
+                      {dreamOwner.username ? `@${dreamOwner.username}` : getDisplayHandle(dreamOwner)}
+                    </Link>
+                  )}
                   <div className='text-sm text-base-content/50'>
                     {formatDreamDate(dream.createdAt || dream.date)}
                   </div>
@@ -275,9 +455,10 @@ export default function Dream() {
                   {/* Edit/Delete buttons for dream owner */}
                   {isAuthenticated && user && dream.userId === user.uid && (
                     <div className='flex gap-2 ml-4'>
+                      {isEditMode ? null : (
                       <button
                         className='btn btn-outline btn-sm'
-                        onClick={() => navigate(`/edit-dream/${dream.id}`)}
+                        onClick={() => setIsEditMode(true)}
                         title='Edit dream'
                       >
                         <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -285,7 +466,7 @@ export default function Dream() {
                         </svg>
                         Edit
                       </button>
-                      
+                      )}
                       <button
                         className='btn btn-outline btn-sm text-red-500 hover:text-red-700'
                         onClick={async () => {
@@ -311,42 +492,166 @@ export default function Dream() {
                 </div>
               </div>
 
-              <div className='w-full h-64 mb-6 rounded-lg overflow-hidden'>
-                {dream.image ? (
-                  <img 
-                    src={dream.image} 
-                    alt={dream.title}
-                    className='w-full h-full object-cover'
-                  />
-                ) : (
-                  <div className='w-full h-full flex items-center justify-center bg-gradient-to-br from-indigo-100 via-purple-100 to-pink-100 dark:from-indigo-900 dark:via-purple-900 dark:to-pink-900'>
-                    <div className='text-center text-base-content/30'>
-                      <div className='text-8xl mb-4'>🌙</div>
-                      <div className='text-lg font-medium'>Sweet Dreams</div>
+              <div className='w-full min-h-64 mb-6 rounded-lg overflow-hidden bg-base-200 flex flex-col'>
+                {isEditMode && dream.userId === user?.uid ? (
+                  <div className='w-full p-4'>
+                    <div className='flex items-center justify-between mb-3'>
+                      <label className='label p-0'><span className='label-text'>Dream Image</span></label>
+                      {editForm.image ? (
+                        <button type='button' className='btn btn-ghost btn-sm' onClick={() => setEditForm(prev => ({ ...prev, image: '' }))}>
+                          Remove image
+                        </button>
+                      ) : (
+                        <button
+                          type='button'
+                          className='btn btn-sm btn-outline'
+                          onClick={handleGenerateImage}
+                          disabled={imageGenerating}
+                          title='Generate an image from your dream description'
+                        >
+                          {imageGenerating ? <><span className='loading loading-spinner loading-sm' /> Generating...</> : 'Generate image with AI'}
+                        </button>
+                      )}
                     </div>
+                    {editForm.image ? (
+                      <img src={editForm.image} alt={editForm.title} className='w-full max-h-[28rem] object-contain rounded-lg' />
+                    ) : (
+                      <div className='min-h-48 rounded-lg border-2 border-dashed border-base-300 flex items-center justify-center text-base-content/50'>
+                        No image yet. Add a description above, then click Generate image with AI.
+                      </div>
+                    )}
+                    {imageError && <p className='text-error text-sm mt-2'>{imageError}</p>}
+                  </div>
+                ) : (
+                  <div className='relative flex items-center justify-center w-full min-h-64'>
+                    {!imageLoaded && (
+                      <div className='absolute inset-0 bg-base-300 animate-skeleton-breathe flex items-center justify-center rounded-lg'>
+                        <div className='relative'>
+                          <div className='w-14 h-14 rounded-full border-2 border-base-content/20 border-t-primary animate-spin' />
+                          <span className='absolute inset-0 flex items-center justify-center text-2xl'>🌙</span>
+                        </div>
+                      </div>
+                    )}
+                    <img
+                      src={dreamImageSrc}
+                      alt={dream.title}
+                      className={`w-full max-h-[28rem] object-contain transition-opacity duration-300 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
+                      onLoad={() => {
+                        loadedImageUrls.add(dreamImageSrc)
+                        setImageLoaded(true)
+                      }}
+                      onError={() => setImageLoaded(true)}
+                    />
                   </div>
                 )}
               </div>
 
-              <div className='prose max-w-none mb-6'>
-                <p className='text-lg leading-relaxed'>{dream.content}</p>
-              </div>
-
-              {dream.tags && dream.tags.length > 0 && (
-                <div className='flex flex-wrap gap-2 mb-6'>
-                  {dream.tags.map((tag, index) => (
-                    <span key={index} className='badge badge-outline'>{tag}</span>
-                  ))}
-                </div>
-              )}
-
-              {dream.mood && (
+              {isEditMode && dream.userId === user?.uid ? (
                 <div className='mb-6'>
-                  <span className='font-semibold'>Mood: </span>
-                  <span className='badge badge-primary'>{dream.mood}</span>
+                  <div className='flex items-center justify-between mb-2'>
+                    <label className='label p-0'><span className='label-text'>Description</span></label>
+                    <button
+                      type='button'
+                      className='btn btn-sm btn-outline'
+                      onClick={handleDescribeWithAI}
+                      disabled={describingWithAI || (!editForm.content?.trim() && !editForm.title?.trim())}
+                      title='Expand your notes into a richer narrative'
+                    >
+                      {describingWithAI ? <><span className='loading loading-spinner loading-sm' /> Describing...</> : 'Describe with AI'}
+                    </button>
+                  </div>
+                  <textarea
+                    className='textarea textarea-bordered w-full h-40'
+                    value={editForm.content}
+                    onChange={(e) => setEditForm(prev => ({ ...prev, content: e.target.value }))}
+                    placeholder='Describe your dream... (Add notes or a title, then use Describe with AI to expand)'
+                  />
+                </div>
+              ) : (
+                <div className='prose max-w-none mb-6'>
+                  <p className='text-lg leading-relaxed'>{dream.content}</p>
                 </div>
               )}
 
+              {isEditMode && dream.userId === user?.uid ? (
+                <div className='space-y-4 mb-6'>
+                  <div>
+                    <label className='label'><span className='label-text'>Mood</span></label>
+                    <select
+                      className='select select-bordered w-full max-w-xs'
+                      value={editForm.mood}
+                      onChange={(e) => setEditForm(prev => ({ ...prev, mood: e.target.value }))}
+                    >
+                      <option value=''>Select mood...</option>
+                      <option value='Peaceful'>Peaceful</option>
+                      <option value='Exciting'>Exciting</option>
+                      <option value='Scary'>Scary</option>
+                      <option value='Confusing'>Confusing</option>
+                      <option value='Happy'>Happy</option>
+                      <option value='Sad'>Sad</option>
+                      <option value='Wonder'>Wonder</option>
+                      <option value='Curious'>Curious</option>
+                    </select>
+                  </div>
+                  <div className='grid grid-cols-1 md:grid-cols-2 gap-4'>
+                    <div><label className='label'><span className='label-text'>Emotions (comma-separated)</span></label><input type='text' className='input input-bordered w-full' value={editForm.emotionsStr} onChange={(e) => setEditForm(prev => ({ ...prev, emotionsStr: e.target.value }))} placeholder='joy, fear...' /></div>
+                    <div><label className='label'><span className='label-text'>Colors (comma-separated)</span></label><input type='text' className='input input-bordered w-full' value={editForm.colorsStr} onChange={(e) => setEditForm(prev => ({ ...prev, colorsStr: e.target.value }))} placeholder='blue, red...' /></div>
+                    <div><label className='label'><span className='label-text'>People (comma-separated)</span></label><input type='text' className='input input-bordered w-full' value={editForm.peopleStr} onChange={(e) => setEditForm(prev => ({ ...prev, peopleStr: e.target.value }))} placeholder='friend, stranger...' /></div>
+                    <div><label className='label'><span className='label-text'>Places (comma-separated)</span></label><input type='text' className='input input-bordered w-full' value={editForm.placesStr} onChange={(e) => setEditForm(prev => ({ ...prev, placesStr: e.target.value }))} placeholder='home, forest...' /></div>
+                    <div><label className='label'><span className='label-text'>Things (comma-separated)</span></label><input type='text' className='input input-bordered w-full' value={editForm.thingsStr} onChange={(e) => setEditForm(prev => ({ ...prev, thingsStr: e.target.value }))} placeholder='car, book...' /></div>
+                    <div>
+                      <label className='label'><span className='label-text'>Your role</span></label>
+                      <div className='flex gap-4'>
+                        <label className='flex items-center gap-2 cursor-pointer'><input type='radio' name='role' className='radio radio-primary' checked={editForm.role === true} onChange={() => setEditForm(prev => ({ ...prev, role: true }))} /><span>Main character</span></label>
+                        <label className='flex items-center gap-2 cursor-pointer'><input type='radio' name='role' className='radio radio-primary' checked={editForm.role === false} onChange={() => setEditForm(prev => ({ ...prev, role: false }))} /><span>Supporting</span></label>
+                      </div>
+                    </div>
+                  </div>
+                  <div className='flex gap-3 pt-4'>
+                    <button type='button' className='btn btn-ghost' onClick={handleCancelDreamEdit} disabled={savingEdit}>Cancel</button>
+                    <button type='button' className='btn btn-primary' onClick={handleSaveEdit} disabled={savingEdit}>
+                      {savingEdit ? <><span className='loading loading-spinner loading-sm' /> Saving</> : 'Save Changes'}
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <>
+                  {dream.tags && dream.tags.length > 0 && (
+                    <div className='flex flex-wrap gap-2 mb-6'>
+                      {dream.tags.map((tag, index) => (
+                        <span key={index} className='badge badge-outline'>{tag}</span>
+                      ))}
+                    </div>
+                  )}
+                  {dream.mood && (
+                    <div className='mb-6'>
+                      <span className='font-semibold'>Mood: </span>
+                      <span className='badge badge-primary'>{dream.mood}</span>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {!isEditMode && dream.interpretation && (
+                <div className='mb-6 p-4 bg-base-200 rounded-lg border-l-4 border-primary'>
+                  <h3 className='font-semibold mb-2'>AI Interpretation</h3>
+                  <p className='text-base-content/80 italic'>{dream.interpretation}</p>
+                </div>
+              )}
+              {!isEditMode && isAuthenticated && user && dream.userId === user.uid && !dream.interpretation && (
+                <div className='mb-6'>
+                  <button
+                    className='btn btn-outline btn-sm'
+                    onClick={handleGenerateInterpretation}
+                    disabled={interpretingLoading}
+                  >
+                    {interpretingLoading ? <span className='loading loading-spinner loading-sm'></span> : 'Generate AI Interpretation'}
+                  </button>
+                </div>
+              )}
+
+              {!isEditMode && (
+              <>
               {/* Action buttons */}
               <div className='flex items-center gap-6 mb-6'>
                 <button
@@ -430,7 +735,7 @@ export default function Dream() {
                     comments.map((comment) => (
                       <div key={comment.id} className='bg-base-200 rounded-lg p-4'>
                         <div className='flex justify-between items-start mb-2'>
-                          <span className='font-semibold'>{comment.user?.displayName || 'Anonymous'}</span>
+                          <span className='font-semibold'>{comment.user?.username ? `@${comment.user.username}` : (comment.user ? getDisplayHandle(comment.user) : 'Anonymous')}</span>
                           <div className='flex items-center gap-2'>
                             <span className='text-sm text-base-content/50'>
                               {comment.createdAt?.seconds 
@@ -507,10 +812,12 @@ export default function Dream() {
                   )}
                 </div>
               </div>
+            </>
+              )}
             </div>
           </div>
         </div>
       </div>
-    </Layout>
+    </>
   )
 } 

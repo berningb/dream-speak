@@ -1,14 +1,13 @@
 import { IoAdd } from 'react-icons/io5'
 import { useNavigate } from 'react-router-dom'
-import Layout from '../../components/Layout'
-import AddDreamModal from '../../components/AddDreamModal'
+import AddDreamWorkflow from '../../components/AddDreamWorkflow'
 import DreamCard from '../../components/DreamCard'
 import { useState, useEffect } from 'react'
 import { useFirebaseAuth } from '../../contexts/FirebaseAuthContext'
-import { getMyDreams, createLike, deleteLike, createFavorite, deleteFavorite, getLikes, getFavorites, deleteDream } from '../../services/firebaseService'
+import { getMyDreamsPaginated, createLike, deleteLike, createFavorite, deleteFavorite, getLikes, getFavorites, deleteDream } from '../../services/firebaseService'
 import Comments from '../../components/Comments'
 
-const DreamItem = ({ dream, isFavorited, onFavoriteToggle, likedByMe, likeCount, onLikeToggle, onCommentClick, onEditClick, onDeleteClick }) => {
+const DreamItem = ({ dream, isFavorited, onFavoriteToggle, likedByMe, likeCount, onLikeToggle, onCommentClick, onEditClick, onDeleteClick, currentUserId }) => {
   const navigate = useNavigate()
   return (
     <DreamCard 
@@ -27,11 +26,13 @@ const DreamItem = ({ dream, isFavorited, onFavoriteToggle, likedByMe, likeCount,
       onEditClick={onEditClick}
       showDeleteButton={true}
       onDeleteClick={onDeleteClick}
+      currentUserId={currentUserId}
     />
   )
 }
 
 export default function MyDreams () {
+  const navigate = useNavigate()
   const { isAuthenticated, loginWithGoogle, user } = useFirebaseAuth()
   const [dreams, setDreams] = useState([])
   const [loading, setLoading] = useState(true)
@@ -40,21 +41,32 @@ export default function MyDreams () {
   const [selectedDreamId, setSelectedDreamId] = useState(null)
   const [dreamStats, setDreamStats] = useState({}) // { dreamId: { likeCount, isLiked, isFavorited } }
   const [loadingStats, setLoadingStats] = useState(false)
-  
+  const [lastDoc, setLastDoc] = useState(null)
+  const [hasMore, setHasMore] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
 
-  const fetchDreams = async () => {
+  const fetchDreams = async (append = false) => {
     try {
-      setLoading(true)
-      const myDreams = await getMyDreams()
-      setDreams(myDreams)
+      if (append) {
+        setLoadingMore(true)
+      } else {
+        setLoading(true)
+      }
+      const { dreams: newDreams, lastDoc: nextLastDoc, hasMore: more } = await getMyDreamsPaginated(24, append ? lastDoc : null)
+      setDreams(prev => append ? [...prev, ...newDreams] : newDreams)
+      setLastDoc(nextLastDoc)
+      setHasMore(more)
       setError(null)
     } catch (err) {
       setError('Failed to fetch dreams')
       console.error('Error fetching dreams:', err)
     } finally {
       setLoading(false)
+      setLoadingMore(false)
     }
   }
+
+  const loadMore = () => fetchDreams(true)
 
   const loadDreamStats = async (dreamsList) => {
     if (!user) {
@@ -230,9 +242,7 @@ export default function MyDreams () {
   }
 
   const handleEditDream = (dream) => {
-    // Navigate to edit page or open edit modal
-    // For now, let's navigate to the dream page where they can edit
-    window.location.href = `/dream/${dream.id}`
+    navigate(`/dream/${dream.id}?edit=1`)
   }
 
   const handleDeleteDream = async (dreamId) => {
@@ -252,26 +262,25 @@ export default function MyDreams () {
   }
 
   if (loading) return (
-    <Layout>
-      <div className="flex items-center justify-center min-h-screen">
-        <span className="loading loading-spinner loading-lg"></span>
-      </div>
-    </Layout>
+    <div className="flex items-center justify-center min-h-screen">
+      <span className="loading loading-spinner loading-lg"></span>
+    </div>
   )
 
-  // No inline add modal on this page; redirect to New Dream page instead
+  const openAddModal = () => document.getElementById('add_dream_modal')?.showModal()
 
   return (
-    <Layout>
-      
+    <>
+      <AddDreamWorkflow onAddDream={fetchDreams} initialDreamType='sweet' />
       <div className='flex flex-col items-center justify-start min-h-screen p-6'>
         <div className='w-full max-w-7xl'>
           <div className='flex flex-col items-center mb-8'>
             <h1 className='text-4xl font-bold text-center mb-6'>My Dreams</h1>
             <button
               className='btn btn-primary btn-lg flex items-center gap-2'
-              onClick={() => (window.location.href = '/new-dream')}
+              onClick={openAddModal}
             >
+              <IoAdd size={20} />
               New Dream
             </button>
           </div>
@@ -286,35 +295,50 @@ export default function MyDreams () {
           ) : dreams.length === 0 ? (
             <div className='text-center'>
               <p className='text-lg mb-4'>No dreams found. Start by logging your first dream!</p>
-              <button
-                className='btn btn-primary'
-                onClick={() => (window.location.href = '/new-dream')}
-              >
-                Log Your First Dream
-              </button>
             </div>
           ) : (
-            <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
-              {dreams.map((dream) => {
-                const stats = dreamStats[dream.id] || { likeCount: 0, isLiked: false, isFavorited: false }
-                const hasStats = dreamStats[dream.id] !== undefined
-                
-                return (
-                  <DreamItem 
-                    key={dream.id} 
-                    dream={dream}
-                    isFavorited={hasStats ? stats.isFavorited : false}
-                    onFavoriteToggle={handleFavoriteToggle}
-                    likedByMe={hasStats ? stats.isLiked : false}
-                    likeCount={hasStats ? stats.likeCount : (loadingStats ? '...' : 0)}
-                    onLikeToggle={handleLikeToggle}
-                    onCommentClick={handleCommentClick}
-                    onEditClick={handleEditDream}
-                    onDeleteClick={handleDeleteDream}
-                  />
-                )
-              })}
-            </div>
+            <>
+              <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
+                {dreams.map((dream) => {
+                  const stats = dreamStats[dream.id] || { likeCount: 0, isLiked: false, isFavorited: false }
+                  const hasStats = dreamStats[dream.id] !== undefined
+                  
+                  return (
+                    <DreamItem 
+                      key={dream.id} 
+                      dream={dream}
+                      isFavorited={hasStats ? stats.isFavorited : false}
+                      onFavoriteToggle={handleFavoriteToggle}
+                      likedByMe={hasStats ? stats.isLiked : false}
+                      likeCount={hasStats ? stats.likeCount : (loadingStats ? '...' : 0)}
+                      onLikeToggle={handleLikeToggle}
+                      onCommentClick={handleCommentClick}
+                      onEditClick={handleEditDream}
+                      onDeleteClick={handleDeleteDream}
+                      currentUserId={user?.uid}
+                    />
+                  )
+                })}
+              </div>
+              {hasMore && (
+                <div className='flex justify-center mt-8'>
+                  <button
+                    className='btn btn-outline btn-wide'
+                    onClick={loadMore}
+                    disabled={loadingMore}
+                  >
+                    {loadingMore ? (
+                      <>
+                        <span className='loading loading-spinner loading-sm' />
+                        Loading...
+                      </>
+                    ) : (
+                      'Load More Dreams'
+                    )}
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -335,6 +359,6 @@ export default function MyDreams () {
           </div>
         </div>
       )}
-    </Layout>
+    </>
   )
 } 

@@ -1,12 +1,42 @@
-import Layout from '../../components/Layout'
+import { useState, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import { useFirebaseAuth } from '../../contexts/FirebaseAuthContext'
+import { getPublicDreamsPaginated, getUser } from '../../services/firebaseService'
+import DreamCard from '../../components/DreamCard'
 
 export default function Home() {
   const { isAuthenticated, loginWithGoogle } = useFirebaseAuth()
+  const [dreams, setDreams] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchDreams = async () => {
+      try {
+        const { dreams: publicDreams } = await getPublicDreamsPaginated(10)
+        try {
+          const userIds = [...new Set(publicDreams.map(d => d.userId).filter(Boolean))]
+          const users = await Promise.all(userIds.map(uid => getUser(uid)))
+          const userMap = Object.fromEntries(users.filter(Boolean).map(u => [u.id, u]))
+          setDreams(publicDreams.map(d => ({ ...d, user: d.userId ? userMap[d.userId] : null })))
+        } catch {
+          setDreams(publicDreams)
+        }
+      } catch (err) {
+        console.error('Error fetching dreams:', err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchDreams()
+  }, [])
+
+  const handleLikeOrFavorite = () => {
+    loginWithGoogle()
+  }
 
   return (
-    <Layout>
-      <div className='flex flex-col items-center justify-center min-h-screen px-4 sm:px-6 md:px-8 py-8'>
+    <div className='flex flex-col min-h-screen px-4 sm:px-6 md:px-8 py-8'>
+      <div className='flex flex-col items-center justify-center flex-grow'>
         <div className='text-center max-w-4xl w-full'>
           <div className='flex flex-col sm:flex-row items-center justify-center mb-6 gap-4'>
             <span className='text-6xl sm:text-8xl'>🌙</span>
@@ -37,16 +67,57 @@ export default function Home() {
             </div>
           ) : (
             <div className='flex flex-col sm:flex-row gap-4 sm:gap-8 justify-center items-center px-4'>
-              <a href='/my-dreams' className='btn btn-primary btn-lg w-full sm:w-auto'>
+              <Link to='/my-dreams' className='btn btn-primary btn-lg w-full sm:w-auto'>
                 📖 My Dream Journal
-              </a>
-              <a href='/explore' className='btn btn-outline btn-lg w-full sm:w-auto'>
+              </Link>
+              <Link to='/explore' className='btn btn-outline btn-lg w-full sm:w-auto'>
                 🔍 Discover Dreams
-              </a>
+              </Link>
             </div>
           )}
         </div>
       </div>
-    </Layout>
+
+      <div className='mt-16 max-w-6xl mx-auto w-full'>
+        <h2 className='text-2xl font-bold mb-6 text-center'>Explore Dreams</h2>
+        {loading ? (
+          <div className='flex justify-center py-12'>
+            <span className='loading loading-spinner loading-lg' />
+          </div>
+        ) : (
+          <>
+            <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
+              {dreams.map((dream) => (
+                <DreamCard
+                  key={dream.id}
+                  dream={dream}
+                  showAuthor={true}
+                  showLikeButton={!isAuthenticated}
+                  showFavoriteButton={!isAuthenticated}
+                  onLikeToggle={!isAuthenticated ? handleLikeOrFavorite : undefined}
+                  onFavoriteToggle={!isAuthenticated ? handleLikeOrFavorite : undefined}
+                  likedByMe={false}
+                  likeCount={0}
+                />
+              ))}
+            </div>
+            <div className='text-center mt-8'>
+              {!isAuthenticated ? (
+                <button
+                  className='btn btn-primary btn-outline'
+                  onClick={loginWithGoogle}
+                >
+                  View more dreams
+                </button>
+              ) : (
+                <Link to='/explore' className='btn btn-primary btn-outline'>
+                  View more dreams
+                </Link>
+              )}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
   )
 }

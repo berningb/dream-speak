@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { useFirebaseAuth } from '../../contexts/FirebaseAuthContext';
 import { getMyDreams } from '../../services/firebaseService';
-import Layout from '../../components/Layout';
 import { 
   PieChart, 
   Pie, 
@@ -197,43 +197,38 @@ export default function Analytics() {
 
   if (loading) {
     return (
-      <Layout>
-        <div className="flex justify-center items-center min-h-screen">
-          <span className="loading loading-spinner loading-lg"></span>
-        </div>
-      </Layout>
+      <div className="flex justify-center items-center min-h-screen">
+        <span className="loading loading-spinner loading-lg"></span>
+      </div>
     );
   }
 
   if (!isAuthenticated) {
     return (
-      <Layout>
-        <div className="flex flex-col items-center justify-center min-h-screen p-6 text-center">
-          <div className="max-w-md">
-            <h1 className="text-3xl font-bold mb-4">Dream Analytics</h1>
-            <p className="text-lg text-base-content/70 mb-8">
-              Unlock deep insights into your subconscious. Sign in to see patterns in your dreams, moods, and themes.
-            </p>
-            <div className="flex flex-col gap-4">
-              <button 
-                className="btn btn-primary btn-lg"
-                onClick={loginWithGoogle}
-              >
-                Sign In with Google
-              </button>
-              <a href="/" className="btn btn-ghost">
-                Back to Home
-              </a>
-            </div>
+      <div className="flex flex-col items-center justify-center min-h-screen p-6 text-center">
+        <div className="max-w-md">
+          <h1 className="text-3xl font-bold mb-4">Dream Analytics</h1>
+          <p className="text-lg text-base-content/70 mb-8">
+            Unlock deep insights into your subconscious. Sign in to see patterns in your dreams, moods, and themes.
+          </p>
+          <div className="flex flex-col gap-4">
+            <button 
+              className="btn btn-primary btn-lg"
+              onClick={loginWithGoogle}
+            >
+              Sign In with Google
+            </button>
+            <Link to="/" className="btn btn-ghost">
+              Back to Home
+            </Link>
           </div>
         </div>
-      </Layout>
+      </div>
     );
   }
 
   return (
-    <Layout>
-      <div className="container mx-auto p-6">
+    <div className="container mx-auto p-6">
         <div className="mb-8">
           <h1 className="text-3xl font-bold">Dream Analytics</h1>
         </div>
@@ -266,7 +261,7 @@ export default function Analytics() {
           <div className="text-center py-12">
             <h2 className="text-xl font-semibold mb-4">No dreams yet!</h2>
             <p className="text-gray-600 mb-6">Start logging your dreams to see beautiful analytics and insights.</p>
-            <a href="/my-dreams" className="btn btn-primary">Start Dreaming</a>
+            <Link to="/my-dreams" className="btn btn-primary">Start Dreaming</Link>
           </div>
         )}
 
@@ -408,6 +403,70 @@ export default function Analytics() {
               </div>
             )}
 
+            {/* Recurring Dream Detection */}
+            {(() => {
+              const recurringThreshold = 2;
+              const tagPairs = {};
+              dreams.forEach(dream => {
+                const tags = dream.tags || [];
+                for (let i = 0; i < tags.length; i++) {
+                  for (let j = i + 1; j < tags.length; j++) {
+                    const key = [tags[i], tags[j]].sort().join('|');
+                    tagPairs[key] = (tagPairs[key] || 0) + 1;
+                  }
+                }
+              });
+              const recurringPairs = Object.entries(tagPairs)
+                .filter(([, count]) => count >= recurringThreshold)
+                .sort(([, a], [, b]) => b - a)
+                .slice(0, 10);
+              const titleLower = (t) => (t || '').toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();
+              const similarTitles = [];
+              for (let i = 0; i < dreams.length; i++) {
+                for (let j = i + 1; j < dreams.length; j++) {
+                  const a = titleLower(dreams[i].title);
+                  const b = titleLower(dreams[j].title);
+                  if (a.length > 5 && b.length > 5 && (a.includes(b) || b.includes(a))) {
+                    similarTitles.push({ a: dreams[i], b: dreams[j] });
+                  }
+                }
+              }
+              const hasRecurring = recurringPairs.length > 0 || similarTitles.length > 0;
+              if (!hasRecurring) return null;
+              return (
+                <div className="mb-8">
+                  <h2 className="text-2xl font-semibold mb-4">Recurring Themes</h2>
+                  <div className="bg-base-200 p-6 rounded-lg space-y-4">
+                    {recurringPairs.length > 0 && (
+                      <div>
+                        <h3 className="font-medium mb-2">Frequent tag combinations</h3>
+                        <ul className="list-disc list-inside space-y-1">
+                          {recurringPairs.map(([pair, count]) => {
+                            const [t1, t2] = pair.split('|');
+                            return (
+                              <li key={pair}>{t1} + {t2} (appeared together {count} times)</li>
+                            );
+                          })}
+                        </ul>
+                      </div>
+                    )}
+                    {similarTitles.length > 0 && (
+                      <div>
+                        <h3 className="font-medium mb-2">Similar dream titles</h3>
+                        <ul className="list-disc list-inside space-y-1 text-sm">
+                          {similarTitles.slice(0, 5).map(({ a, b }, idx) => (
+                            <li key={idx}>
+                              &quot;{a.title}&quot; and &quot;{b.title}&quot;
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
+
             {/* Detailed Statistics */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               
@@ -473,7 +532,6 @@ export default function Analytics() {
             </div>
           </>
         )}
-      </div>
-    </Layout>
+    </div>
   );
 } 

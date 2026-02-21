@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { useFirebaseAuth } from '../../contexts/FirebaseAuthContext'
-import Layout from '../../components/Layout'
 import { createUser } from '../../services/firebaseService'
 
 export default function Signup() {
@@ -8,7 +7,8 @@ export default function Signup() {
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
-    picture: ''
+    picture: '',
+    username: ''
   })
   const [saveLoading, setSaveLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -16,11 +16,12 @@ export default function Signup() {
   // Auto-populate form with user data
   useEffect(() => {
     if (user) {
-      setFormData({
+      setFormData(prev => ({
+        ...prev,
         firstName: user.displayName?.split(' ')[0] || '',
         lastName: user.displayName?.split(' ').slice(1).join(' ') || '',
         picture: user.photoURL || ''
-      })
+      }))
     }
   }, [user])
 
@@ -39,7 +40,8 @@ export default function Signup() {
       await createUser({
         firstName: formData.firstName,
         lastName: formData.lastName,
-        picture: formData.picture
+        picture: formData.picture,
+        username: formData.username?.trim() || undefined
       })
 
       // Redirect to settings after successful signup
@@ -61,30 +63,25 @@ export default function Signup() {
 
   if (loading) {
     return (
-      <Layout>
-        <div className="flex justify-center items-center min-h-screen">
-          <span className="loading loading-spinner loading-lg"></span>
-        </div>
-      </Layout>
+      <div className="flex justify-center items-center min-h-screen">
+        <span className="loading loading-spinner loading-lg"></span>
+      </div>
     )
   }
 
   if (!user) {
     return (
-      <Layout>
-        <div className="flex justify-center items-center min-h-screen">
-          <div className="text-center">
-            <h2 className="text-2xl font-bold mb-4">Please Sign In</h2>
-            <p className="text-base-content/70 mb-4">You need to sign in to complete your profile</p>
-            <a href="/" className="btn btn-primary">Go to Home</a>
-          </div>
+      <div className="flex justify-center items-center min-h-screen">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold mb-4">Please Sign In</h2>
+          <p className="text-base-content/70 mb-4">You need to sign in to complete your profile</p>
+          <a href="/" className="btn btn-primary">Go to Home</a>
         </div>
-      </Layout>
+      </div>
     )
   }
 
   return (
-    <Layout>
       <div className='flex flex-col items-center justify-start min-h-screen p-6'>
         <div className='w-full max-w-2xl'>
           <div className='text-center mb-8'>
@@ -135,6 +132,19 @@ export default function Signup() {
 
                 <div>
                   <label className='label'>
+                    <span className='label-text font-semibold'>Username</span>
+                    <span className='label-text-alt'>Optional. Your public handle for sharing (3–30 chars)</span>
+                  </label>
+                  <input
+                    type='text'
+                    className='input input-bordered w-full'
+                    value={formData.username}
+                    onChange={(e) => handleInputChange('username', e.target.value)}
+                    placeholder='e.g. dreamer_jane'
+                  />
+                </div>
+                <div>
+                  <label className='label'>
                     <span className='label-text font-semibold'>Profile Picture URL</span>
                   </label>
                   <input
@@ -174,6 +184,5 @@ export default function Signup() {
           </div>
         </div>
       </div>
-    </Layout>
   )
 } 

@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react'
-import { getPublicDreams, createLike, deleteLike, createFavorite, deleteFavorite, getLikes, getFavorites, canUserLike, canUserFavorite } from '../../services/firebaseService'
+import { getPublicDreamsPaginated, createLike, deleteLike, createFavorite, deleteFavorite, getLikes, getFavorites, canUserLike, canUserFavorite, getUser } from '../../services/firebaseService'
 import { useFirebaseAuth } from '../../contexts/FirebaseAuthContext'
-import Layout from '../../components/Layout'
 import DreamCard from '../../components/DreamCard'
-import AddDreamModal from '../../components/AddDreamModal'
+import AddDreamWorkflow from '../../components/AddDreamWorkflow'
 
 export default function Explore() {
   const { isAuthenticated, loginWithGoogle, user } = useFirebaseAuth()
@@ -16,34 +15,63 @@ export default function Explore() {
   const [selectedTags, setSelectedTags] = useState([])
   const [availableTags, setAvailableTags] = useState([])
   const [showAllTags, setShowAllTags] = useState(false)
+  const [lastDoc, setLastDoc] = useState(null)
+  const [hasMore, setHasMore] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
 
-  const fetchDreams = async () => {
+  const fetchDreams = async (append = false) => {
     try {
-      setLoading(true)
-      console.log('🔄 Fetching public dreams...')
-      const publicDreams = await getPublicDreams()
-      console.log('📋 Got', publicDreams.length, 'public dreams')
-      setDreams(publicDreams)
-      
-      // Extract all unique tags from dreams
-      const allTags = new Set()
-      publicDreams.forEach(dream => {
-        if (dream.tags && Array.isArray(dream.tags)) {
-          dream.tags.forEach(tag => allTags.add(tag))
-        }
-      })
-      setAvailableTags(Array.from(allTags).sort())
+      if (append) {
+        setLoadingMore(true)
+      } else {
+        setLoading(true)
+      }
+      console.log('🔄 Fetching public dreams...', append ? '(load more)' : '', selectedTags.length ? `tags: ${selectedTags.join(',')}` : '')
+      const tagFilter = selectedTags.length > 0 ? selectedTags : null
+      const { dreams: rawDreams, lastDoc: nextLastDoc, hasMore: more } = await getPublicDreamsPaginated(24, append ? lastDoc : null, tagFilter)
+      const userIds = [...new Set(rawDreams.map(d => d.userId).filter(Boolean))]
+      let userMap = {}
+      if (userIds.length > 0) {
+        const users = await Promise.all(userIds.map(uid => getUser(uid)))
+        userMap = Object.fromEntries(users.filter(Boolean).map(u => [u.id, u]))
+      }
+      const newDreams = rawDreams.map(d => ({ ...d, user: d.userId ? userMap[d.userId] : null }))
+      console.log('📋 Got', newDreams.length, 'dreams, hasMore:', more)
+      setDreams(prev => append ? [...prev, ...newDreams] : newDreams)
+      setLastDoc(nextLastDoc)
+      setHasMore(more)
+
+      if (!append) {
+        const allTags = new Set()
+        newDreams.forEach(dream => {
+          if (dream.tags && Array.isArray(dream.tags)) {
+            dream.tags.forEach(tag => allTags.add(tag))
+          }
+        })
+        setAvailableTags(Array.from(allTags).sort())
+      } else {
+        setAvailableTags(prev => {
+          const next = new Set(prev)
+          newDreams.forEach(dream => {
+            if (dream.tags && Array.isArray(dream.tags)) {
+              dream.tags.forEach(tag => next.add(tag))
+            }
+          })
+          return Array.from(next).sort()
+        })
+      }
       
       setError(null)
-      
-      // Note: Dream stats will be loaded by the useEffect that watches authentication
     } catch (err) {
       setError('Failed to fetch dreams')
       console.error('❌ Error fetching dreams:', err)
     } finally {
       setLoading(false)
+      setLoadingMore(false)
     }
   }
+
+  const loadMore = () => fetchDreams(true)
 
   const loadDreamStats = async (dreamsList) => {
     if (!user) {
@@ -96,9 +124,11 @@ export default function Explore() {
     }
   }
 
+  const tagFilterKey = selectedTags.slice().sort().join(',')
   useEffect(() => {
+    setLastDoc(null)
     fetchDreams()
-  }, [])
+  }, [tagFilterKey])
 
   // Load dream stats when authentication changes
   useEffect(() => {
@@ -281,24 +311,22 @@ export default function Explore() {
 
   if (loading) {
     return (
-      <Layout>
-        <div className="flex justify-center items-center min-h-screen">
-          <span className="loading loading-spinner loading-lg"></span>
-        </div>
-      </Layout>
+      <div className="flex justify-center items-center min-h-screen">
+        <span className="loading loading-spinner loading-lg"></span>
+      </div>
     )
   }
 
   return (
-    <Layout>
-      <AddDreamModal onAddDream={handleAddDream} />
+    <>
+      <AddDreamWorkflow onAddDream={handleAddDream} />
       <div className='flex flex-col items-center justify-start min-h-screen p-6'>
         <div className='w-full max-w-7xl'>
           <div className='flex flex-col items-center mb-8'>
             <h1 className='text-4xl font-bold text-center mb-6'>Explore Dreams</h1>
             <button
               className='btn btn-primary btn-lg flex items-center gap-2'
-              onClick={() => (window.location.href = '/new-dream')}
+              onClick={() => document.getElementById('add_dream_modal')?.showModal()}
             >
               Share Your Dream
             </button>
@@ -424,38 +452,52 @@ export default function Explore() {
               </button>
             </div>
           ) : (
-            <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
-              {filteredDreams.map((dream) => {
-                const stats = dreamStats[dream.id] || { likeCount: 0, isLiked: false, isFavorited: false }
-                const hasStats = dreamStats[dream.id] !== undefined
-                
-                console.log(`🌟 Dream ${dream.id} favorite state:`, { 
-                  hasStats, 
-                  statsFavorited: stats.isFavorited, 
-                  sending: hasStats ? stats.isFavorited : false 
-                })
-                
-                return (
-                  <DreamCard
-                    key={dream.id}
-                    dream={dream}
-                    showAuthor={true}
-                    showFavoriteButton={true}
-                    isFavorited={hasStats ? stats.isFavorited : false}
-                    onFavoriteToggle={handleFavoriteToggle}
-                    onClick={() => window.location.href = `/dream/${dream.id}`}
-                    likedByMe={hasStats ? stats.isLiked : false}
-                    likeCount={hasStats ? stats.likeCount : (loadingStats ? '...' : 0)}
-                    onLikeToggle={handleLikeToggle}
-                    showCommentButton={false}
-                    onCommentClick={handleCommentClick}
-                  />
-                )
-              })}
-            </div>
+            <>
+              <div className='grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6'>
+                {filteredDreams.map((dream) => {
+                  const stats = dreamStats[dream.id] || { likeCount: 0, isLiked: false, isFavorited: false }
+                  const hasStats = dreamStats[dream.id] !== undefined
+                  
+                  return (
+                    <DreamCard
+                      key={dream.id}
+                      dream={dream}
+                      showAuthor={true}
+                      showFavoriteButton={true}
+                      isFavorited={hasStats ? stats.isFavorited : false}
+                      onFavoriteToggle={handleFavoriteToggle}
+                      onClick={() => window.location.href = `/dream/${dream.id}`}
+                      likedByMe={hasStats ? stats.isLiked : false}
+                      likeCount={hasStats ? stats.likeCount : (loadingStats ? '...' : 0)}
+                      onLikeToggle={handleLikeToggle}
+                      showCommentButton={false}
+                      onCommentClick={handleCommentClick}
+                    />
+                  )
+                })}
+              </div>
+              {hasMore && (
+                <div className='flex justify-center mt-8'>
+                  <button
+                    className='btn btn-outline btn-wide'
+                    onClick={loadMore}
+                    disabled={loadingMore}
+                  >
+                    {loadingMore ? (
+                      <>
+                        <span className='loading loading-spinner loading-sm' />
+                        Loading...
+                      </>
+                    ) : (
+                      'Load More Dreams'
+                    )}
+                  </button>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
-    </Layout>
+    </>
   )
 } 
