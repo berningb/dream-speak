@@ -112,6 +112,13 @@ service cloud.firestore {
         request.resource.data.userId1 == request.auth.uid || request.resource.data.userId2 == request.auth.uid
       );
     }
+
+    // AI usage limits (per-user daily quotas)
+    match /aiUsage/{docId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
   }
 }
 

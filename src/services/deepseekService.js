@@ -3,10 +3,13 @@
  * Uses deepseek-chat (V3.2); context caching gives automatic cache hits for repeated prefixes.
  */
 
+import { checkAndConsumeLimit } from './aiLimitService'
+
 const DEEPSEEK_API_URL = 'https://api.deepseek.com/v1/chat/completions'
 const MODEL = 'deepseek-chat'
 
 export async function chatWithDeepSeek(messages, options = {}) {
+  await checkAndConsumeLimit('chat')
   const apiKey = import.meta.env.VITE_DEEPSEEK_API_KEY
   if (!apiKey) {
     throw new Error('VITE_DEEPSEEK_API_KEY is not set. Add it to .env to use the dream workflow.')
@@ -41,6 +44,7 @@ export async function chatWithDeepSeek(messages, options = {}) {
  * Extract structured dream data from conversation using DeepSeek.
  */
 export async function extractDreamFromConversation(messages) {
+  await checkAndConsumeLimit('extract')
   const apiKey = import.meta.env.VITE_DEEPSEEK_API_KEY
   if (!apiKey) {
     throw new Error('VITE_DEEPSEEK_API_KEY is not set.')
@@ -87,6 +91,7 @@ Only include type-specific fields when type matches. Use empty arrays/strings wh
  * Generate a brief AI interpretation of a dream based on its content.
  */
 export async function interpretDream(dreamContent) {
+  await checkAndConsumeLimit('interpret')
   const apiKey = import.meta.env.VITE_DEEPSEEK_API_KEY
   if (!apiKey) {
     throw new Error('VITE_DEEPSEEK_API_KEY is not set. Add it to .env to use dream interpretation.')
@@ -110,6 +115,7 @@ export async function interpretDream(dreamContent) {
  * Expand or describe a dream from brief notes into a richer narrative.
  */
 export async function describeDream(input) {
+  await checkAndConsumeLimit('describe')
   const apiKey = import.meta.env.VITE_DEEPSEEK_API_KEY
   if (!apiKey) {
     throw new Error('VITE_DEEPSEEK_API_KEY is not set. Add it to .env to use AI dream description.')

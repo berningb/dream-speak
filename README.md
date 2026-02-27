@@ -63,6 +63,18 @@ Add these to your `.env` to enable the workflow:
 - `VITE_DEEPSEEK_API_KEY` – from [DeepSeek API](https://platform.deepseek.com)
 - `VITE_GOOGLE_API_KEY` or `VITE_GEMINI_API_KEY` – from [Google AI Studio](https://aistudio.google.com/)
 
+### AI Usage Limits
+
+To protect against runaway API costs, per-user daily limits are enforced. Defaults (overridable via `.env`):
+
+- `VITE_AI_LIMIT_CHAT` – chat messages (default: 30/day)
+- `VITE_AI_LIMIT_EXTRACT` – dream extraction (default: 10/day)
+- `VITE_AI_LIMIT_INTERPRET` – dream interpretation (default: 20/day)
+- `VITE_AI_LIMIT_DESCRIBE` – AI expansion (default: 10/day)
+- `VITE_AI_LIMIT_IMAGE` – image generation (default: 5/day)
+
+Limits reset at midnight UTC. Set to `0` to disable a feature.
+
 ## 🔒 Privacy Features
 
 DreamSpeak puts privacy first:

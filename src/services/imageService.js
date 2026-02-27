@@ -4,8 +4,10 @@
  */
 
 import { GoogleGenAI } from '@google/genai'
+import { checkAndConsumeLimit } from './aiLimitService'
 
 export async function generateDreamImage(prompt) {
+  await checkAndConsumeLimit('image')
   const apiKey = import.meta.env.VITE_NANOBANANA_API_KEY || import.meta.env.VITE_GOOGLE_API_KEY || import.meta.env.VITE_GEMINI_API_KEY
   if (!apiKey) {
     throw new Error('VITE_NANOBANANA_API_KEY (or VITE_GOOGLE_API_KEY) is not set. Add it to .env from aistudio.google.com.')
