@@ -61,9 +61,6 @@ export default function Home() {
               >
                 🌟 Begin Your Dream Journey
               </button>
-              <p className='text-base-content/70'>
-                Join our community of dreamers and start sharing your stories
-              </p>
             </div>
           ) : (
             <div className='flex flex-col sm:flex-row gap-4 sm:gap-8 justify-center items-center px-4'>

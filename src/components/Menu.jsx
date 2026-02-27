@@ -1,10 +1,12 @@
 import { Link, NavLink } from 'react-router-dom'
 import { useFirebaseAuth } from '../contexts/FirebaseAuthContext'
+import { useBackendUser } from '../hooks/useUsers'
 import { IoColorPaletteOutline } from 'react-icons/io5'
-import SelectorTheme, { ThemeSelectorContent } from './SelectorTheme'
+import { ThemeSelectorContent } from './SelectorTheme'
 
 export default function Menu() {
   const { isAuthenticated, loginWithGoogle, user, logout } = useFirebaseAuth()
+  const { backendUser } = useBackendUser()
 
   return (
     <div className="navbar bg-base-100 px-6 md:px-8">
@@ -45,15 +47,18 @@ export default function Menu() {
         <div className="flex items-center gap-2">
           {!isAuthenticated ? (
             <>
-              <SelectorTheme />
               <button className="btn btn-primary" onClick={loginWithGoogle}>
                 Sign In
               </button>
             </>
           ) : (
-            <div className="dropdown dropdown-end">
-              <div tabIndex={0} role="button" className="btn btn-ghost btn-circle avatar w-12 h-12 min-h-0 p-0">
-                <div className="w-12 h-12 rounded-full overflow-hidden">
+            <div className="flex items-center gap-2">
+              <span className="hidden sm:inline font-medium text-base-content/90 truncate max-w-[120px]">
+                {backendUser?.username || user?.email?.split('@')[0] || user?.displayName || 'User'}
+              </span>
+              <div className="dropdown dropdown-end">
+                <div tabIndex={0} role="button" className="btn btn-ghost btn-circle avatar w-12 h-12 min-h-0 p-0">
+                  <div className="w-12 h-12 rounded-full overflow-hidden">
                   <img 
                     alt="Profile" 
                     src={user?.photoURL || '/default-avatar.png'}
@@ -61,7 +66,7 @@ export default function Menu() {
                   />
                 </div>
               </div>
-              <ul tabIndex={0} className="dropdown-content mt-3 z-[9999] py-2 px-2 shadow bg-base-100 rounded-box w-72 max-h-[70vh] overflow-y-auto flex flex-col gap-0">
+              <ul tabIndex={0} className="dropdown-content mt-3 z-[9999] py-2 px-2 shadow bg-base-100 rounded-box w-52 min-w-40 max-h-[70vh] overflow-y-auto flex flex-col gap-0">
                 <li>
                   <details>
                     <summary className="flex items-center gap-2 text-base py-1.5 cursor-pointer hover:text-primary active:text-primary transition-colors">
@@ -74,6 +79,7 @@ export default function Menu() {
                 <li><NavLink to="/settings" className={({ isActive }) => `block text-base py-1.5 hover:text-primary active:text-primary transition-colors ${isActive ? 'text-primary' : ''}`}>Profile</NavLink></li>
                 <li><button onClick={logout} className="w-full text-left text-base py-1.5 hover:text-primary active:text-primary bg-transparent border-none cursor-pointer transition-colors">Logout</button></li>
               </ul>
+              </div>
             </div>
           )}
         </div>
