@@ -1,0 +1,14 @@
+# Copy this file to `.dev.vars` in the project root for local Cloudflare Pages
+# Functions (e.g. `wrangler pages dev`). Never commit `.dev.vars`.
+#
+# Production: set the same names as encrypted secrets in the Cloudflare dashboard
+# (Workers & Pages → your project → Settings → Variables and Secrets).
+
+# --- Google OAuth (server-side only; not VITE_) ---
+# Use a Google OAuth 2.0 Web client (Google Cloud Console → APIs & Services → Credentials).
+# Authorized redirect URIs must include your callback URL, for example:
+#   https://localhost:3000/api/auth/callback
+#   https://YOUR-SUBDOMAIN.pages.dev/api/auth/callback
+#   https://your-custom-domain/api/auth/callback
+GOOGLE_CLIENT_ID=
+GOOGLE_CLIENT_SECRET=
