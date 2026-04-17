@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { IoClose } from 'react-icons/io5'
 import { createDream } from '../services/firebaseService'
+import SpeechMicButton from './SpeechMicButton'
 
 function AddDreamModal ({ onAddDream, initialDreamType = 'normal' }) {
   const [formData, setFormData] = useState({
@@ -9,7 +10,6 @@ function AddDreamModal ({ onAddDream, initialDreamType = 'normal' }) {
     date: new Date().toISOString().split('T')[0],
     tags: [],
     isPublic: false,
-    image: '',
     mood: '',
     emotions: [],
     colors: [],
@@ -72,7 +72,6 @@ function AddDreamModal ({ onAddDream, initialDreamType = 'normal' }) {
       date: new Date(formData.date).toISOString(),
       tags: formData.tags,
       isPublic: formData.isPublic,
-      image: formData.image || null,
       mood: formData.mood || null,
       emotions: formData.emotions,
       colors: formData.colors,
@@ -105,7 +104,6 @@ function AddDreamModal ({ onAddDream, initialDreamType = 'normal' }) {
         date: new Date().toISOString().split('T')[0],
         tags: [],
         isPublic: false,
-        image: '',
         mood: '',
         emotions: [],
         colors: [],
@@ -204,18 +202,27 @@ function AddDreamModal ({ onAddDream, initialDreamType = 'normal' }) {
               </div>
               
               <div>
-                <label className='label'>
+                <div className='label flex items-center justify-between gap-2 py-0'>
                   <span className='label-text font-medium text-white'>Description</span>
-                </label>
+                  <SpeechMicButton
+                    className='!border-slate-600 !bg-slate-800/80 text-white'
+                    onAppend={(chunk) =>
+                      setFormData(prev => ({
+                        ...prev,
+                        description: prev.description ? `${prev.description.trim()} ${chunk}` : chunk
+                      }))
+                    }
+                  />
+                </div>
                 <textarea
-                  className={`textarea textarea-bordered w-full h-40 bg-white border-slate-300 focus:ring-2 transition-all resize-none ${isNormal ? 'focus:border-sky-500 focus:ring-sky-200' : isLucid ? 'focus:border-emerald-500 focus:ring-emerald-200' : 'focus:border-violet-500 focus:ring-violet-200'}`}
+                  className={`textarea textarea-bordered mt-1 w-full h-40 bg-white border-slate-300 focus:ring-2 transition-all resize-none ${isNormal ? 'focus:border-sky-500 focus:ring-sky-200' : isLucid ? 'focus:border-emerald-500 focus:ring-emerald-200' : 'focus:border-violet-500 focus:ring-violet-200'}`}
                   value={formData.description}
                   onChange={e => handleInputChange('description', e.target.value)}
-                  placeholder='Describe your dream in detail... What happened? How did it feel? What did you see?'
+                  placeholder='Describe your dream in detail... What happened? How did it feel? What did you see? (Or use the mic to dictate.)'
                 />
               </div>
               
-              <div className='grid grid-cols-1 lg:grid-cols-3 gap-6'>
+              <div className='grid grid-cols-1 lg:grid-cols-2 gap-6'>
                 <div>
                   <label className='label'>
                     <span className='label-text font-medium text-white'>Date</span>
@@ -247,19 +254,6 @@ function AddDreamModal ({ onAddDream, initialDreamType = 'normal' }) {
                     <option value='Wonder'>🤩 Wonder</option>
                     <option value='Curious'>🧐 Curious</option>
                   </select>
-                </div>
-
-                <div>
-                  <label className='label'>
-                    <span className='label-text font-medium text-white'>Image URL (optional)</span>
-                  </label>
-                  <input
-                    type='url'
-                   className={`input input-bordered w-full bg-white border-slate-300 focus:ring-2 transition-all ${isNormal ? 'focus:border-sky-500 focus:ring-sky-200' : isLucid ? 'focus:border-emerald-500 focus:ring-emerald-200' : 'focus:border-violet-500 focus:ring-violet-200'}`}
-                    value={formData.image}
-                    onChange={e => handleInputChange('image', e.target.value)}
-                    placeholder='https://example.com/image.jpg'
-                  />
                 </div>
               </div>
             </div>
