@@ -15,11 +15,13 @@ import MyDreams from './pages/MyDreams'
 import Dream from './pages/Dream'
 import Explore from './pages/Explore'
 import Analytics from './pages/Analytics'
+import Overview from './pages/Overview'
 import Favorites from './pages/Favorites'
 import Connections from './pages/Connections'
 import UserProfile from './pages/UserProfile'
 
 import Layout from './components/Layout'
+import ErrorBoundary from './components/ErrorBoundary'
 import Settings from './pages/Settings'
 import Signup from './pages/Settings/Signup'
 function EditDreamRedirect() {
@@ -70,6 +72,7 @@ const AppRoutes = () => (
         <Route path='/connections' element={<Connections />} />
         <Route path='/user/:id' element={<UserProfile />} />
         <Route path='/analytics' element={<Analytics />} />
+        <Route path='/overview' element={<Overview />} />
         <Route path='/signup' element={<Signup />} />
         <Route path='/settings' element={<RequireProfile><Settings /></RequireProfile>} />
         <Route path='/settings/profile' element={<RequireProfile><Settings /></RequireProfile>} />
@@ -90,7 +93,9 @@ createRoot(document.getElementById('root')).render(
   <StrictMode>
     <FirebaseAuthProvider>
       <BackendUserProvider>
-        <AppRoutes />
+        <ErrorBoundary>
+          <AppRoutes />
+        </ErrorBoundary>
       </BackendUserProvider>
     </FirebaseAuthProvider>
   </StrictMode>
