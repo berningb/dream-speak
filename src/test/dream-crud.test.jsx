@@ -27,7 +27,6 @@ const mockDream = {
   date: '2024-01-01T00:00:00.000Z',
   isPublic: false,
   tags: ['test', 'dream'],
-  image: null,
   mood: 'Peaceful',
   emotions: ['joy', 'wonder'],
   colors: ['blue', 'green'],
@@ -102,7 +101,6 @@ describe('Dream CRUD Operations', () => {
         date: new Date().toISOString(),
         tags: [],
         isPublic: false,
-        image: null,
         mood: 'Happy',
         emotions: ['joy', 'excitement'],
         colors: ['red', 'yellow'],
@@ -130,10 +128,10 @@ describe('Dream CRUD Operations', () => {
 
       const titleInput = screen.getByPlaceholderText('Enter a captivating title for your dream...')
       fireEvent.change(titleInput, { target: { value: 'Test Dream' } })
-      const descInput = screen.getByPlaceholderText('Describe your dream in detail... What happened? How did it feel? What did you see?')
+      const descInput = screen.getByPlaceholderText(/Describe your dream in detail/)
       fireEvent.change(descInput, { target: { value: 'Test description' } })
 
-      const submitButton = screen.getByText('Save Dream')
+      const submitButton = screen.getByRole('button', { name: /save dream/i, hidden: true })
       fireEvent.click(submitButton)
 
       await waitFor(() => {
@@ -152,7 +150,7 @@ describe('Dream CRUD Operations', () => {
         </TestWrapper>
       )
 
-      const submitButton = screen.getByText('Save Dream')
+      const submitButton = screen.getByRole('button', { name: /save dream/i, hidden: true })
       fireEvent.click(submitButton)
 
       await waitFor(() => {})
@@ -346,7 +344,6 @@ describe('Dream CRUD Operations', () => {
         date: new Date().toISOString(),
         tags: ['test'],
         isPublic: false,
-        image: null,
         mood: 'Curious',
         emotions: ['curiosity'],
         colors: ['purple'],
@@ -407,7 +404,6 @@ describe('Dream CRUD Operations', () => {
       expect(dream).toHaveProperty('user')
 
       // Check optional fields
-      expect(dream).toHaveProperty('image')
       expect(dream).toHaveProperty('mood')
       expect(dream).toHaveProperty('emotions')
       expect(dream).toHaveProperty('colors')
