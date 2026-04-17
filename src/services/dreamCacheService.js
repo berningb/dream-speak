@@ -1,6 +1,5 @@
 /**
  * In-memory cache for dreams and dream lists to avoid redundant Firestore reads when navigating.
- * Images are cached by the browser (same URL = cached). This cache targets document fetches.
  */
 
 const DREAM_TTL_MS = 5 * 60 * 1000       // 5 min for individual dreams

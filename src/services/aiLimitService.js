@@ -20,8 +20,7 @@ const DEFAULT_LIMITS = {
   chat: parseInt(import.meta.env.VITE_AI_LIMIT_CHAT, 10) || 30,
   extract: parseInt(import.meta.env.VITE_AI_LIMIT_EXTRACT, 10) || 10,
   interpret: parseInt(import.meta.env.VITE_AI_LIMIT_INTERPRET, 10) || 20,
-  describe: parseInt(import.meta.env.VITE_AI_LIMIT_DESCRIBE, 10) || 10,
-  image: parseInt(import.meta.env.VITE_AI_LIMIT_IMAGE, 10) || 5
+  describe: parseInt(import.meta.env.VITE_AI_LIMIT_DESCRIBE, 10) || 10
 }
 
 function getTodayKey() {
@@ -65,7 +64,6 @@ export async function checkAndConsumeLimit(actionType) {
         extract: 0,
         interpret: 0,
         describe: 0,
-        image: 0,
         ...updates,
         createdAt: serverTimestamp()
       })
@@ -99,8 +97,7 @@ export async function getUsage() {
     chat: data.chat || 0,
     extract: data.extract || 0,
     interpret: data.interpret || 0,
-    describe: data.describe || 0,
-    image: data.image || 0
+    describe: data.describe || 0
   }
 }
 
