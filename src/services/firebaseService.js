@@ -18,7 +18,16 @@ import {
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, listAll, deleteObject } from 'firebase/storage';
 import { db, auth, storage } from '../firebase';
-import { getCachedDream, setCachedDream, invalidateDream, invalidateLists, getCachedList, setCachedList } from './dreamCacheService';
+import {
+  getCachedDream,
+  setCachedDream,
+  invalidateDream,
+  invalidateLists,
+  getCachedList,
+  setCachedList,
+  getCachedFullList,
+  setCachedFullList
+} from './dreamCacheService';
 
 // Helper function to check authentication
 const checkAuth = () => {
@@ -40,28 +49,13 @@ const retryOperation = async (operation, maxRetries = 3) => {
       
       // Wait before retrying (exponential backoff)
       const delay = Math.pow(2, attempt) * 1000;
-      console.log(`Retrying operation in ${delay}ms (attempt ${attempt}/${maxRetries})`);
+      if (import.meta.env.DEV) {
+        console.log(`Retrying operation in ${delay}ms (attempt ${attempt}/${maxRetries})`);
+      }
       await new Promise(resolve => setTimeout(resolve, delay));
     }
   }
 };
-
-// Helper: upload base64/data URL image to Storage, return public URL
-export const uploadDreamImage = async (dataUrl, dreamId = 'new') => {
-  if (!dataUrl || !dataUrl.startsWith('data:')) return null
-  const userId = checkAuth()
-  const [header, base64] = dataUrl.split(',')
-  const mime = header.match(/data:([^;]+)/)?.[1] || 'image/png'
-  const ext = mime.includes('png') ? 'png' : 'jpeg'
-  const binary = atob(base64)
-  const bytes = new Uint8Array(binary.length)
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
-  const blob = new Blob([bytes], { type: mime })
-  const path = `dreams/${userId}/${dreamId}-${Date.now()}.${ext}`
-  const storageRef = ref(storage, path)
-  await uploadBytes(storageRef, blob)
-  return getDownloadURL(storageRef)
-}
 
 // Dreams collection
 const dreamsCollection = 'dreams';
@@ -198,14 +192,16 @@ export const createDream = async (dreamData) => {
     
     // Use retry logic for the write operation
     return await retryOperation(async () => {
+      const rest = { ...dreamData }
+      delete rest.image
       const dreamRef = await addDoc(collection(db, dreamsCollection), {
-        ...dreamData,
+        ...rest,
         userId,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
       invalidateLists();
-      return { id: dreamRef.id, ...dreamData };
+      return { id: dreamRef.id, ...rest };
     });
   } catch (error) {
     console.error('Error creating dream:', error);

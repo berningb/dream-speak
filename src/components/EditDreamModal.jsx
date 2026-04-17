@@ -1,12 +1,10 @@
 import { useState, useEffect } from 'react'
 import { IoClose } from 'react-icons/io5'
-import { generateDreamImage } from '../services/imageService'
 
 export default function EditDreamModal({ dream, isOpen, onClose, onSave }) {
   const [formData, setFormData] = useState({
     title: '',
     description: '',
-    image: '',
     mood: '',
     emotions: [],
     colors: [],
@@ -15,8 +13,6 @@ export default function EditDreamModal({ dream, isOpen, onClose, onSave }) {
     things: [],
     role: false
   })
-  const [imageGenerating, setImageGenerating] = useState(false)
-  const [imageError, setImageError] = useState(null)
   const [saving, setSaving] = useState(false)
 
   // Initialize form data when dream prop changes
@@ -25,7 +21,6 @@ export default function EditDreamModal({ dream, isOpen, onClose, onSave }) {
       setFormData({
         title: dream.title || '',
         description: dream.description || dream.content || '',
-        image: dream.image || '',
         mood: dream.mood || '',
         emotions: dream.emotions || [],
         colors: dream.colors || [],
@@ -50,20 +45,6 @@ export default function EditDreamModal({ dream, isOpen, onClose, onSave }) {
       ...prev,
       [field]: array
     }))
-  }
-
-  const handleGenerateImage = async () => {
-    const prompt = formData.description || formData.title || 'A dream scene'
-    setImageGenerating(true)
-    setImageError(null)
-    try {
-      const imageUrl = await generateDreamImage(prompt)
-      if (imageUrl) handleInputChange('image', imageUrl)
-    } catch (err) {
-      setImageError(err.message)
-    } finally {
-      setImageGenerating(false)
-    }
   }
 
   const handleSubmit = async (e) => {
@@ -124,42 +105,6 @@ export default function EditDreamModal({ dream, isOpen, onClose, onSave }) {
               />
             </div>
 
-            <div className="rounded-xl p-5 bg-base-200/40 border border-base-300/40">
-              <label className="block text-sm font-medium text-base-content/80 mb-3">Dream Image</label>
-              {formData.image ? (
-                <div>
-                  <img
-                    src={formData.image}
-                    alt="Dream"
-                    className="rounded-lg max-h-64 w-full object-cover object-center"
-                  />
-                  <button
-                    type="button"
-                    className="mt-3 text-sm text-base-content/60 hover:text-error transition-colors"
-                    onClick={() => handleInputChange('image', '')}
-                  >
-                    Remove image
-                  </button>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  className="w-full py-4 px-4 rounded-lg border-2 border-dashed border-base-300 hover:border-primary/40 hover:bg-primary/5 transition-all flex items-center justify-center gap-2 text-base-content/70 hover:text-primary"
-                  onClick={handleGenerateImage}
-                  disabled={imageGenerating}
-                >
-                  {imageGenerating ? (
-                    <><span className="loading loading-spinner loading-sm" /> Generating image...</>
-                  ) : (
-                    <>🖼️ Generate image with AI</>
-                  )}
-                </button>
-              )}
-              {imageError && (
-                <p className="text-error text-sm mt-2">{imageError}</p>
-              )}
-            </div>
-            
             <div className="flex flex-wrap gap-3 items-center">
               <label className="text-sm font-medium text-base-content/80">Mood</label>
               <select 
