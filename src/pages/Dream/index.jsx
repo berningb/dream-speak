@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { useFirebaseAuth } from '../../contexts/FirebaseAuthContext'
-import { getDream, getUser, createComment, getComments, createLike, deleteLike, createFavorite, deleteFavorite, getLikes, getFavorites, canUserComment, canUserLike, canUserFavorite, deleteComment, updateComment, deleteDream, updateDream, uploadDreamImage } from '../../services/firebaseService'
+import { deleteField } from 'firebase/firestore'
+import { getDream, getUser, createComment, getComments, createLike, deleteLike, createFavorite, deleteFavorite, getLikes, getFavorites, canUserComment, canUserLike, canUserFavorite, deleteComment, updateComment, deleteDream, updateDream } from '../../services/firebaseService'
 import { interpretDream, describeDream } from '../../services/deepseekService'
-import { formatDreamDate, loadedImageUrls, getDisplayHandle } from '../../utils'
-import { generateDreamImage } from '../../services/imageService'
+import { formatDreamDate, getDisplayHandle } from '../../utils'
 
 export default function Dream() {
   const { id } = useParams()
@@ -25,33 +25,11 @@ export default function Dream() {
   const [editingCommentText, setEditingCommentText] = useState('')
   const [searchParams, setSearchParams] = useSearchParams()
   const [isEditMode, setIsEditMode] = useState(false)
-  const [editForm, setEditForm] = useState({ title: '', content: '', image: '', mood: '', emotionsStr: '', colorsStr: '', peopleStr: '', placesStr: '', thingsStr: '', role: false })
-  const [imageGenerating, setImageGenerating] = useState(false)
-  const [imageError, setImageError] = useState(null)
+  const [editForm, setEditForm] = useState({ title: '', content: '', mood: '', emotionsStr: '', colorsStr: '', peopleStr: '', placesStr: '', thingsStr: '', role: false })
   const [savingEdit, setSavingEdit] = useState(false)
   const [describingWithAI, setDescribingWithAI] = useState(false)
   const [interpretingLoading, setInterpretingLoading] = useState(false)
-  const [imageLoaded, setImageLoaded] = useState(false)
   const [dreamOwner, setDreamOwner] = useState(null)
-
-  const dreamImageSrc = dream?.image || '/dream-placeholder.svg'
-  const dreamImageAlreadyLoaded = loadedImageUrls.has(dreamImageSrc)
-
-  useEffect(() => {
-    if (!dream?.image) {
-      setImageLoaded(true)
-      return
-    }
-    if (dreamImageAlreadyLoaded) {
-      setImageLoaded(true)
-      return
-    }
-    setImageLoaded(false)
-
-    const maxWait = 15000
-    const bail = setTimeout(() => setImageLoaded(true), maxWait)
-    return () => clearTimeout(bail)
-  }, [dream?.image, dreamImageAlreadyLoaded])
 
   useEffect(() => {
     const fetchDream = async () => {
@@ -106,7 +84,6 @@ export default function Dream() {
       setEditForm({
         title: dream.title || '',
         content: dream.content || dream.description || '',
-        image: dream.image || '',
         mood: dream.mood || '',
         emotionsStr: arrToStr(dream.emotions),
         colorsStr: arrToStr(dream.colors),
@@ -312,14 +289,10 @@ export default function Dream() {
     }
     setSavingEdit(true)
     try {
-      let imageUrl = editForm.image || null
-      if (imageUrl?.startsWith('data:')) {
-        imageUrl = await uploadDreamImage(imageUrl, id)
-      }
       await updateDream(id, {
         title: editForm.title,
         content: editForm.content,
-        image: imageUrl,
+        image: deleteField(),
         mood: editForm.mood,
         emotions: parseCommaList(editForm.emotionsStr),
         colors: parseCommaList(editForm.colorsStr),
@@ -332,7 +305,6 @@ export default function Dream() {
         ...prev,
         title: editForm.title,
         content: editForm.content,
-        image: imageUrl,
         mood: editForm.mood,
         emotions: parseCommaList(editForm.emotionsStr),
         colors: parseCommaList(editForm.colorsStr),
@@ -354,20 +326,6 @@ export default function Dream() {
   const handleCancelDreamEdit = () => {
     setIsEditMode(false)
     setSearchParams({})
-  }
-
-  const handleGenerateImage = async () => {
-    const prompt = editForm.content || editForm.title || 'A dream scene'
-    setImageGenerating(true)
-    setImageError(null)
-    try {
-      const imageUrl = await generateDreamImage(prompt)
-      if (imageUrl) setEditForm(prev => ({ ...prev, image: imageUrl }))
-    } catch (err) {
-      setImageError(err.message)
-    } finally {
-      setImageGenerating(false)
-    }
   }
 
   const parseCommaList = (str) => str.split(',').map(s => s.trim()).filter(Boolean)
@@ -490,60 +448,6 @@ export default function Dream() {
                     </div>
                   )}
                 </div>
-              </div>
-
-              <div className='w-full min-h-64 mb-6 rounded-lg overflow-hidden bg-base-200 flex flex-col'>
-                {isEditMode && dream.userId === user?.uid ? (
-                  <div className='w-full p-4'>
-                    <div className='flex items-center justify-between mb-3'>
-                      <label className='label p-0'><span className='label-text'>Dream Image</span></label>
-                      {editForm.image ? (
-                        <button type='button' className='btn btn-ghost btn-sm' onClick={() => setEditForm(prev => ({ ...prev, image: '' }))}>
-                          Remove image
-                        </button>
-                      ) : (
-                        <button
-                          type='button'
-                          className='btn btn-sm btn-outline'
-                          onClick={handleGenerateImage}
-                          disabled={imageGenerating}
-                          title='Generate an image from your dream description'
-                        >
-                          {imageGenerating ? <><span className='loading loading-spinner loading-sm' /> Generating...</> : 'Generate image with AI'}
-                        </button>
-                      )}
-                    </div>
-                    {editForm.image ? (
-                      <img src={editForm.image} alt={editForm.title} className='w-full max-h-[28rem] object-contain rounded-lg' />
-                    ) : (
-                      <div className='min-h-48 rounded-lg border-2 border-dashed border-base-300 flex items-center justify-center text-base-content/50'>
-                        No image yet. Add a description above, then click Generate image with AI.
-                      </div>
-                    )}
-                    {imageError && <p className='text-error text-sm mt-2'>{imageError}</p>}
-                  </div>
-                ) : (
-                  <div className='relative flex items-center justify-center w-full min-h-64'>
-                    {!imageLoaded && (
-                      <div className='absolute inset-0 bg-base-300 animate-skeleton-breathe flex items-center justify-center rounded-lg'>
-                        <div className='relative'>
-                          <div className='w-14 h-14 rounded-full border-2 border-base-content/20 border-t-primary animate-spin' />
-                          <span className='absolute inset-0 flex items-center justify-center text-2xl'>🌙</span>
-                        </div>
-                      </div>
-                    )}
-                    <img
-                      src={dreamImageSrc}
-                      alt={dream.title}
-                      className={`w-full max-h-[28rem] object-contain transition-opacity duration-300 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`}
-                      onLoad={() => {
-                        loadedImageUrls.add(dreamImageSrc)
-                        setImageLoaded(true)
-                      }}
-                      onError={() => setImageLoaded(true)}
-                    />
-                  </div>
-                )}
               </div>
 
               {isEditMode && dream.userId === user?.uid ? (

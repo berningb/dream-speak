@@ -1,11 +1,12 @@
 import { IoAdd } from 'react-icons/io5'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import AddDreamWorkflow from '../../components/AddDreamWorkflow'
 import DreamCard from '../../components/DreamCard'
 import { useState, useEffect } from 'react'
 import { useFirebaseAuth } from '../../contexts/FirebaseAuthContext'
 import { getMyDreamsPaginated, createLike, deleteLike, createFavorite, deleteFavorite, getLikes, getFavorites, deleteDream } from '../../services/firebaseService'
 import Comments from '../../components/Comments'
+import { isValidCalendarDateKey } from '../../utils'
 
 const DreamItem = ({ dream, isFavorited, onFavoriteToggle, likedByMe, likeCount, onLikeToggle, onCommentClick, onEditClick, onDeleteClick, currentUserId }) => {
   const navigate = useNavigate()
@@ -33,6 +34,9 @@ const DreamItem = ({ dream, isFavorited, onFavoriteToggle, likedByMe, likeCount,
 
 export default function MyDreams () {
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  const dateParam = searchParams.get('date')
+  const [seedAddDate, setSeedAddDate] = useState(null)
   const { isAuthenticated, loginWithGoogle, user } = useFirebaseAuth()
   const [dreams, setDreams] = useState([])
   const [loading, setLoading] = useState(true)
@@ -70,17 +74,14 @@ export default function MyDreams () {
 
   const loadDreamStats = async (dreamsList) => {
     if (!user) {
-      console.log('❌ No user, skipping loadDreamStats')
       return
     }
-    
-    console.log('🔄 Loading dream stats for', dreamsList.length, 'dreams, user:', user.uid)
+
     setLoadingStats(true)
-    
+
     try {
       const stats = {}
       const userFavorites = await getFavorites()
-      console.log('📋 User favorites count:', userFavorites.length)
       
       // Load likes for all dreams in parallel for faster loading
       const likePromises = dreamsList.map(dream => 
@@ -98,11 +99,8 @@ export default function MyDreams () {
           isLiked: !!userLike,
           isFavorited: !!userFavorite
         }
-        
-        console.log(`📊 Dream ${dreamId}: ${likes.length} likes, user liked: ${!!userLike}, favorited: ${!!userFavorite}`)
       }
-      
-      console.log('✅ Final dream stats:', stats)
+
       setDreamStats(stats)
     } catch (error) {
       console.error('❌ Error loading dream stats:', error)
@@ -116,6 +114,20 @@ export default function MyDreams () {
       fetchDreams()
     }
   }, [isAuthenticated])
+
+  useEffect(() => {
+    if (!dateParam || !isValidCalendarDateKey(dateParam)) return
+    setSeedAddDate(dateParam)
+    navigate('/my-dreams', { replace: true })
+  }, [dateParam, navigate])
+
+  useEffect(() => {
+    if (!seedAddDate) return
+    const id = requestAnimationFrame(() => {
+      document.getElementById('add_dream_modal')?.showModal()
+    })
+    return () => cancelAnimationFrame(id)
+  }, [seedAddDate])
 
   // Load dream stats when authentication changes or dreams are loaded
   useEffect(() => {
@@ -267,11 +279,24 @@ export default function MyDreams () {
     </div>
   )
 
-  const openAddModal = () => document.getElementById('add_dream_modal')?.showModal()
+  const handleDreamAdded = () => {
+    setSeedAddDate(null)
+    fetchDreams()
+  }
+
+  const openAddModal = () => {
+    setSeedAddDate(null)
+    requestAnimationFrame(() => document.getElementById('add_dream_modal')?.showModal())
+  }
 
   return (
     <>
-      <AddDreamWorkflow onAddDream={fetchDreams} initialDreamType='sweet' />
+      <AddDreamWorkflow
+        key={seedAddDate ?? 'default'}
+        onAddDream={handleDreamAdded}
+        initialDate={seedAddDate || undefined}
+        onClose={() => setSeedAddDate(null)}
+      />
       <div className='flex flex-col items-center justify-start min-h-screen p-6'>
         <div className='w-full max-w-7xl'>
           <div className='flex flex-col items-center mb-8'>
@@ -345,18 +370,32 @@ export default function MyDreams () {
 
       {/* Comments Modal */}
       {commentsOpen && (
-        <div className='modal modal-open'>
-          <div className='modal-box'>
-            <div className='modal-action'>
-              <button 
-                className='btn'
+        <div className='modal modal-open p-4'>
+          <div
+            className='modal-box max-w-lg w-full rounded-2xl border border-base-content/10 bg-base-200 p-0 shadow-2xl ring-1 ring-white/5'
+            onClick={e => e.stopPropagation()}
+          >
+            <div className='flex items-center justify-between border-b border-base-content/10 px-5 py-3'>
+              <h3 className='font-semibold text-base'>Comments</h3>
+              <button
+                type='button'
+                className='btn btn-ghost btn-sm btn-circle'
                 onClick={() => setCommentsOpen(false)}
+                aria-label='Close comments'
               >
-                Close
+                ✕
               </button>
             </div>
-            <Comments dreamId={selectedDreamId} />
+            <div className='max-h-[min(70vh,520px)] overflow-y-auto px-5 py-4'>
+              <Comments dreamId={selectedDreamId} />
+            </div>
           </div>
+          <button
+            type='button'
+            className='modal-backdrop cursor-default bg-transparent'
+            onClick={() => setCommentsOpen(false)}
+            aria-label='Close comments'
+          />
         </div>
       )}
     </>

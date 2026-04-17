@@ -3,7 +3,7 @@ import { useFirebaseAuth } from '../../contexts/FirebaseAuthContext'
 import { useBackendUser } from '../../hooks/useUsers'
 import PrivacySettings from '../../components/PrivacySettings'
 import NotificationSettings from '../../components/NotificationSettings'
-import { formatFullDate, getDisplayHandle } from '../../utils'
+import { avatarImgProps, formatFullDate, getAvatarSrc, getDisplayHandle } from '../../utils'
 import { getMyDreams, updateUser, exportUserData, deleteAllUserData } from '../../services/firebaseService'
 
 export default function Settings() {
@@ -26,6 +26,8 @@ export default function Settings() {
   const [showNotificationSettings, setShowNotificationSettings] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deletePassword, setDeletePassword] = useState('');
+
+  const settingsAvatarSrc = getAvatarSrc({ user, backendUser })
 
   // Sync editForm with backend user when loaded
   useEffect(() => {
@@ -288,7 +290,7 @@ export default function Settings() {
                 <div className='flex items-center space-x-4'>
                   <div className='avatar'>
                     <div className='w-16 h-16 rounded-full'>
-                      <img src={user?.photoURL || '/default-avatar.png'} alt='Profile' />
+                      <img src={settingsAvatarSrc} alt='Profile' {...avatarImgProps(settingsAvatarSrc)} />
                     </div>
                   </div>
                   <div>

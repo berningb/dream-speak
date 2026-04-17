@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { useFirebaseAuth } from '../../contexts/FirebaseAuthContext'
 import { getUser, getUserByUsername, sendFriendRequest, areFriends, getPublicDreams } from '../../services/firebaseService'
-import { getDisplayHandle } from '../../utils'
+import { avatarImgProps, getAvatarSrc, getDisplayHandle } from '../../utils'
 
 export default function UserProfile() {
   const { id } = useParams()
@@ -74,6 +74,7 @@ export default function UserProfile() {
   }
 
   const name = profileUser.username ? `@${profileUser.username}` : getDisplayHandle(profileUser)
+  const profileAvatarSrc = getAvatarSrc({ profileUser })
   const profileShareUrl = profileUser.username
     ? `${window.location.origin}/user/${profileUser.username}`
     : `${window.location.origin}/user/${profileUser.id}`
@@ -83,7 +84,7 @@ export default function UserProfile() {
       <div className='flex flex-col sm:flex-row items-start sm:items-center gap-6 mb-8'>
         <div className='avatar'>
           <div className='w-24 h-24 rounded-full'>
-            <img src={profileUser.picture || '/default-avatar.png'} alt={name} />
+            <img src={profileAvatarSrc} alt={name} {...avatarImgProps(profileAvatarSrc)} />
           </div>
         </div>
         <div className='flex-1'>
