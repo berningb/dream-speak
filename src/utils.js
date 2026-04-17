@@ -1,18 +1,25 @@
-import moment from 'moment'
+import dayjs from 'dayjs'
+import customParseFormat from 'dayjs/plugin/customParseFormat'
 
-/** Shared set of image URLs that have finished loading. Used by DreamCard and Dream page for instant display when navigating. */
-export const loadedImageUrls = new Set()
+dayjs.extend(customParseFormat)
 
-// Theme initialization function
+/** Single dark brand theme (DaisyUI `night`). */
+const APP_THEME = 'night'
+
 export const initializeTheme = () => {
-  const savedTheme = localStorage.getItem('dream-speak-theme')
-  const themeToApply = savedTheme || 'aqua'
-  document.documentElement.setAttribute('data-theme', themeToApply)
-  if (!savedTheme) {
-    localStorage.setItem('dream-speak-theme', themeToApply)
+  document.documentElement.setAttribute('data-theme', APP_THEME)
+  return APP_THEME
+}
+
+/** Parse Firestore Timestamp, ISO string, or other date inputs. */
+export function parseToDayjs(input) {
+  if (input == null) return null
+  if (typeof input === 'object' && input.seconds != null) {
+    return dayjs(input.seconds * 1000)
   }
-  return themeToApply
-};
+  const d = dayjs(input)
+  return d.isValid() ? d : null
+}
 
 /** Front-facing handle for a user: username if set, else firstName + lastName, else displayName, else email or 'Dreamer' */
 export const getDisplayHandle = (user) => {
@@ -26,74 +33,58 @@ export const getDisplayHandle = (user) => {
 
 export const formatDreamDate = (dateString) => {
   if (!dateString) return 'No date'
-  
-  const momentDate = moment(dateString)
-  
-  if (!momentDate.isValid()) {
+
+  const d = parseToDayjs(dateString) || dayjs(dateString)
+  if (!d.isValid()) {
     return 'Invalid date'
   }
-  
-  // If it's today, show "Today"
-  if (momentDate.isSame(moment(), 'day')) {
+
+  if (d.isSame(dayjs(), 'day')) {
     return 'Today'
   }
-  
-  // If it's yesterday, show "Yesterday"
-  if (momentDate.isSame(moment().subtract(1, 'day'), 'day')) {
+
+  if (d.isSame(dayjs().subtract(1, 'day'), 'day')) {
     return 'Yesterday'
   }
-  
-  // If it's within the last 7 days, show the day name
-  if (momentDate.isAfter(moment().subtract(7, 'days'))) {
-    return momentDate.format('dddd')
+
+  if (d.isAfter(dayjs().subtract(7, 'day'))) {
+    return d.format('dddd')
   }
-  
-  // Otherwise show the date in a nice format
-  return momentDate.format('MMM D')
+
+  return d.format('MMM D')
+}
+
+/** Weekday, day-of-month number, and full date line for dream card headers. */
+export const getDreamCardDateParts = (dateString) => {
+  if (!dateString) return null
+  const m = parseToDayjs(dateString) || dayjs(dateString)
+  if (!m.isValid()) return null
+  return {
+    weekdayShort: m.format('ddd'),
+    weekdayLong: m.format('dddd'),
+    dayOfMonth: m.format('D'),
+    dateLine: m.format('MMMM D, YYYY')
+  }
+}
+
+/** Local calendar day YYYY-MM-DD for a dream (prefers `date`, else `createdAt`). */
+export const getDreamCalendarDayKey = (dream) => {
+  const raw = dream.date || dream.createdAt
+  if (!raw) return null
+  const m = parseToDayjs(raw) || dayjs(raw)
+  return m.isValid() ? m.format('YYYY-MM-DD') : null
 }
 
 export const formatFullDate = (dateString) => {
   if (!dateString) return 'No date'
-  
-  const momentDate = moment(dateString)
-  if (!momentDate.isValid()) {
+
+  const d = parseToDayjs(dateString) || dayjs(dateString)
+  if (!d.isValid()) {
     return 'Invalid date'
   }
-  
-  return momentDate.format('MMMM D, YYYY')
-}
 
-export const themes = [
-    { name: 'light', colors: ['#570df8', '#f000b8', '#37cdbe', '#3d4451'] },
-    { name: 'dark', colors: ['#661AE6', '#D926A9', '#1FB2A6', '#D99330'] },
-    { name: 'cupcake', colors: ['#65c3c8', '#ffcccb', '#ffdde2', '#e7dedc'] },
-    { name: 'bumblebee', colors: ['#FFBF00', '#E4A000', '#292524', '#E5E5E5'] },
-    { name: 'emerald', colors: ['#66cc8a', '#ffd700', '#1f2937', '#4b5563'] },
-    { name: 'corporate', colors: ['#4A89DC', '#37CDBE', '#34C6C0', '#A1AAB2'] },
-    { name: 'synthwave', colors: ['#EE82EE', '#D626FF', '#FCBD06', '#38353C'] },
-    { name: 'retro', colors: ['#FABD2F', '#D7827E', '#988BC7', '#FE5E5E'] },
-    { name: 'cyberpunk', colors: ['#ff7597', '#ffb86c', '#8be9fd', '#50fa7b'] },
-    { name: 'valentine', colors: ['#ffafcc', '#ffb3c6', '#ffb3c6', '#ffb3c6'] },
-    { name: 'halloween', colors: ['#ff7518', '#ffb347', '#ff7518', '#ffb347'] },
-    { name: 'garden', colors: ['#4caf50', '#8bc34a', '#cddc39', '#ffeb3b'] },
-    { name: 'forest', colors: ['#228b22', '#2e8b57', '#3cb371', '#66cdaa'] },
-    { name: 'aqua', colors: ['#00ffff', '#7fffd4', '#40e0d0', '#48d1cc'] },
-    { name: 'lofi', colors: ['#f5f5f5', '#dcdcdc', '#a9a9a9', '#808080'] },
-    { name: 'pastel', colors: ['#ffb3ba', '#ffdfba', '#ffffba', '#baffc9'] },
-    { name: 'fantasy', colors: ['#ffb6c1', '#ff69b4', '#ff1493', '#db7093'] },
-    { name: 'wireframe', colors: ['#d3d3d3', '#a9a9a9', '#808080', '#696969'] },
-    { name: 'black', colors: ['#000000', '#2f2f2f', '#4f4f4f', '#6f6f6f'] },
-    { name: 'luxury', colors: ['#ffd700', '#daa520', '#b8860b', '#8b4513'] },
-    { name: 'dracula', colors: ['#ff79c6', '#bd93f9', '#ffb86c', '#ff5555'] },
-    { name: 'cmyk', colors: ['#00bcd4', '#ffeb3b', '#ff5722', '#9c27b0'] },
-    { name: 'autumn', colors: ['#d2691e', '#ff7f50', '#ff6347', '#ff4500'] },
-    { name: 'business', colors: ['#1e40af', '#1e3a8a', '#1e3a8a', '#1e3a8a'] },
-    { name: 'acid', colors: ['#84cc16', '#a3e635', '#bef264', '#d9f99d'] },
-    { name: 'lemonade', colors: ['#fde68a', '#fcd34d', '#fbbf24', '#f59e0b'] },
-    { name: 'night', colors: ['#1e3a8a', '#1e40af', '#1e3a8a', '#1e40af'] },
-    { name: 'coffee', colors: ['#6b7280', '#4b5563', '#374151', '#1f2937'] },
-    { name: 'winter', colors: ['#60a5fa', '#3b82f6', '#2563eb', '#1d4ed8'] },
-];
+  return d.format('MMMM D, YYYY')
+}
 
 // Function to get the dynamic API URL based on current protocol and hostname
 export const getApiUrl = () => {
@@ -102,3 +93,32 @@ export const getApiUrl = () => {
   const protocol = window.location.protocol
   return `${protocol}//${hostname}:4000/graphql`
 }
+
+/** Fallback when no profile image URL exists (file in `public/`). */
+export const DEFAULT_AVATAR_PATH = '/default-avatar.svg'
+
+/**
+ * Resolve avatar URL: backend profile picture, then Firebase Auth photoURL.
+ * Pass whichever of `user`, `backendUser`, `profileUser` apply.
+ */
+export const getAvatarSrc = ({ user, backendUser, profileUser } = {}) => {
+  const raw =
+    backendUser?.picture ||
+    profileUser?.picture ||
+    user?.photoURL ||
+    ''
+  const trimmed = typeof raw === 'string' ? raw.trim() : ''
+  return trimmed || DEFAULT_AVATAR_PATH
+}
+
+/** Google and many CDNs block hotlinked images without a relaxed referrer policy. */
+export const avatarImgProps = (src) => {
+  if (typeof src === 'string' && (src.startsWith('http://') || src.startsWith('https://'))) {
+    return { referrerPolicy: 'no-referrer' }
+  }
+  return {}
+}
+
+/** Strict YYYY-MM-DD validation (for URL params and workflow seed dates). */
+export const isValidCalendarDateKey = (value) =>
+  typeof value === 'string' && dayjs(value, 'YYYY-MM-DD', true).isValid()
